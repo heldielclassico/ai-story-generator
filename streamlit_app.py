@@ -43,7 +43,7 @@ def generate_response(user_input):
         update_info = next((line for line in lines if "Update" in line), "")
         
         # Kata kunci yang dibuang agar tidak salah deteksi
-        stop_words = ["apa", "berapa", "siapa", "mana", "ada", "tentang", "jumlah", "nama", "adalah"]
+        stop_words = ["apa", "berapa", "siapa", "mana", "ada", "tentang", "jumlah", "nama", "adalah","No"]
         query_words = [word.lower() for word in user_input.split() if word.lower() not in stop_words and len(word) > 2]
         
         relevant_info = []
@@ -114,6 +114,7 @@ with st.form("chat_form", clear_on_submit=False):
 # Footer sederhana
 st.markdown("---")
 st.caption("Sumber data: poltesa.ac.id & Quipper Campus")
+
 
 
 
