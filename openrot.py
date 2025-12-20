@@ -41,7 +41,7 @@ def generate_response(user_input):
     # Inisialisasi Model melalui OpenRouter
     # Anda bisa mengganti model ke "google/gemini-2.0-flash-exp:free" atau lainnya
     model = ChatOpenAI(
-        model="google/gemini-2.5-flash-lite-001", 
+        model="google/gemini-2.5-flash-lite", 
         openai_api_key=api_key,
         openai_api_base="https://openrouter.ai/api/v1",
         temperature=0.0,
@@ -115,3 +115,4 @@ with st.form("chat_form", clear_on_submit=False):
 # Footer
 st.markdown("---")
 st.caption("Sumber data: poltesa.ac.id & Database Internal Poltesa | Powered by OpenRouter")
+
