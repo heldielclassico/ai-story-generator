@@ -72,7 +72,7 @@ def generate_response(user_input):
     # --- ALUR 2: JIKA TIDAK DITEMUKAN DI LOKAL, BARU AKTIFKAN GEMINI ---
     # Ganti model ke "gemini-1.5-flash" (disarankan untuk kestabilan saat ini)
     model = ChatGoogleGenerativeAI(
-        model="gemini-1.5-flash", 
+        model="gemini-2.5-flash-lite", 
         google_api_key=api_key,
         temperature=0.0
     )
@@ -127,6 +127,7 @@ with st.form("chat_form", clear_on_submit=False):
 # Footer sederhana
 st.markdown("---")
 st.caption("Sumber data: poltesa.ac.id & Quipper Campus")
+
 
 
 
