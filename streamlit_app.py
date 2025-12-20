@@ -14,10 +14,14 @@ st.title("🎓 Asisten Virtual Poltesa")
 # 3. Fungsi Load Prompt
 def load_system_prompt(file_path):
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
-            return f.read()
-    except FileNotFoundError:
-        st.error(f"File {file_path} tidak ditemukan!")
+        if os.path.exists(file_path):
+            with open(file_path, "r", encoding="utf-8") as f:
+                return f.read()
+        else:
+            st.error(f"File {file_path} tidak ditemukan!")
+            return ""
+    except Exception as e:
+        st.error(f"Gagal membaca file prompt: {e}")
         return ""
 
 # 4. Fungsi Generate Response
@@ -26,7 +30,8 @@ def generate_response(user_input):
         st.error("API Key tidak ditemukan di file .env!")
         return
 
-    # Inisialisasi Model dengan Temperature 0 (Sangat Kaku)
+    # Inisialisasi Model
+    # Catatan: Jika gemini-2.5-flash sering limit, Anda bisa ganti ke gemini-1.5-flash
     model = ChatGoogleGenerativeAI(
         model="gemini-2.5-flash", 
         google_api_key=api_key,
@@ -36,8 +41,7 @@ def generate_response(user_input):
     # Ambil instruksi dari file txt
     instruction = load_system_prompt("prompt.txt")
     
-    # Teknik Gabungkan instruksi dan input user dalam satu string (Prompt Engineering)
-    # Ini memaksa model membaca data instruksi tepat sebelum menjawab
+    # Gabungkan instruksi dan input user (Prompt Wrapping)
     final_prompt = f"""
     INSTRUCTIONS:
     {instruction}
@@ -50,10 +54,15 @@ def generate_response(user_input):
     
     try:
         response = model.invoke(final_prompt)
-        # Menampilkan hasil dengan kotak informasi
         st.info(response.content)
     except Exception as e:
-        st.error(f"Terjadi kesalahan saat menghubungi AI: {e}")
+        # Menangkap error kuota habis (Rate Limit)
+        error_msg = str(e)
+        if "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg:
+            st.error("Kami sedang mengalami Gangguan Teknis. Silakan coba beberapa menit lagi.")
+        else:
+            # Menampilkan pesan error lainnya untuk keperluan debugging
+            st.error(f"Terjadi kesalahan saat menghubungi AI: {e}")
 
 # 5. UI Form
 with st.form("chat_form"):
@@ -73,4 +82,3 @@ with st.form("chat_form"):
 # Footer sederhana
 st.markdown("---")
 st.caption("Sumber data: poltesa.ac.id & Quipper Campus")
-
