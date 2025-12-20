@@ -69,7 +69,7 @@ def generate_response(user_input):
         return
 
     model = ChatOpenAI(
-        model="google/gemini-2.0-flash-lite-preview-02-05", 
+        model="google/gemini-2.5-flash-lite-preview-02-05", 
         openai_api_key=api_key_secret,
         openai_api_base="https://openrouter.ai/api/v1",
         temperature=0.0,
@@ -137,3 +137,4 @@ with st.form("chat_form", clear_on_submit=False):
 # Footer
 st.markdown("---")
 st.caption("Sumber data: poltesa.ac.id & Database Internal Poltesa | Powered by OpenRouter")
+
