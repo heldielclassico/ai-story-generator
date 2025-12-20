@@ -34,30 +34,33 @@ def generate_response(user_input):
         st.error("API Key tidak ditemukan di file .env!")
         return
 
-    # Load prompt.txt sebagai basis pengetahuan AI
+    # Memuat konten prompt.txt sebagai basis data utama AI
     instruction = load_system_prompt("prompt.txt")
     
-    # Inisialisasi Model
+    # Inisialisasi Model Gemini 2.5 Flash
     model = ChatGoogleGenerativeAI(
         model="gemini-2.5-flash", 
         google_api_key=api_key,
         temperature=0.0
     )
     
-    # Final Prompt yang menekankan prompt.txt sebagai referensi utama
+    # Menyusun instruksi ketat (System Instruction)
     final_prompt = f"""
-    REFERENSI UTAMA (Gunakan data ini untuk menjawab):
+    ROLE: Anda adalah Sivita, Asisten Virtual Resmi Politeknik Negeri Sambas (POLTESA).
+    
+    REFERENSI DATA WAJIB:
     {instruction}
     
-    PERTANYAAN PENGGUNA:
+    ATURAN JAWABAN:
+    1. Anda WAJIB menjawab pertanyaan hanya berdasarkan REFERENSI DATA WAJIB di atas.
+    2. Jika pertanyaan mengenai statistik (alumni, maba, prodi), gunakan data tepat sesuai referensi.
+    3. Jika informasi TIDAK ADA dalam referensi, katakan dengan sopan bahwa data tersebut belum tersedia di database resmi saat ini.
+    4. DILARANG berhalusinasi atau menggunakan informasi dari luar data yang diberikan.
+    
+    USER QUESTION:
     {user_input}
     
-    INSTRUKSI JAWABAN:
-    1. Jawab berdasarkan REFERENSI UTAMA di atas.
-    2. Jika data (seperti jumlah alumni, jurusan, dll) ada di referensi, gunakan data tersebut.
-    3. Jika tidak ada di referensi, sampaikan bahwa informasi tersebut belum tersedia.
-    
-    JAWABAN ANDA:
+    YOUR ANSWER:
     """
     
     try:
@@ -67,11 +70,11 @@ def generate_response(user_input):
         
     except Exception as e:
         error_msg = str(e)
-        # Jika Gemini Limit, hanya tampilkan pesan error tanpa menampilkan isi prompt.txt
+        # Jika limit tercapai, tampilkan hanya pesan error
         if "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg:
             st.error("Kami sedang mengalami Gangguan Teknis (Limit Kuota). Silakan coba beberapa menit lagi.")
         else:
-            st.error(f"Terjadi kesalahan: {e}")
+            st.error(f"Terjadi kesalahan saat menghubungi AI: {e}")
 
 # 5. UI Form
 with st.form("chat_form", clear_on_submit=False):
@@ -81,6 +84,7 @@ with st.form("chat_form", clear_on_submit=False):
         key="user_input" 
     )
     
+    # Kolom tombol agar sejajar di tampilan Mobile/HP
     col1, col2 = st.columns([1, 1.5]) 
     
     with col1:
@@ -92,10 +96,9 @@ with st.form("chat_form", clear_on_submit=False):
         if user_text.strip() == "":
             st.warning("Mohon masukkan pertanyaan terlebih dahulu.")
         else:
-            with st.spinner("Menghubungi AI..."):
+            with st.spinner("Mencari data resmi..."):
                 generate_response(user_text)
 
 # Footer
 st.markdown("---")
 st.caption("Sumber data: poltesa.ac.id & Database Internal Poltesa")
-
