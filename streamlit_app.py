@@ -35,7 +35,7 @@ def generate_response(user_input):
         return
 
     model = ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash", # Note: Pastikan nama model sesuai (misal: gemini-1.5-flash)
+        model="gemini-1.5-flash", 
         google_api_key=api_key,
         temperature=0.0
     )
@@ -53,12 +53,17 @@ def generate_response(user_input):
     """
     
     try:
+        # Mencoba memanggil Gemini
         response = model.invoke(final_prompt)
         st.info(response.content)
     except Exception as e:
         error_msg = str(e)
         if "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg:
+            # 1. Tampilkan pesan error sesuai permintaan Anda
             st.error("Kami sedang mengalami Gangguan Teknis. Silakan coba beberapa menit lagi.")
+            
+            # 2. Langsung tampilkan isi prompt.txt tanpa pesan tambahan
+            st.write(instruction)
         else:
             st.error(f"Terjadi kesalahan saat menghubungi AI: {e}")
 
@@ -88,3 +93,4 @@ with st.form("chat_form", clear_on_submit=False):
 # Footer sederhana
 st.markdown("---")
 st.caption("Sumber data: poltesa.ac.id & Quipper Campus")
+
