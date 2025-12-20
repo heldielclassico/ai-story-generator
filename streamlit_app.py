@@ -89,20 +89,22 @@ def generate_response(user_input):
             st.error(f"Terjadi kesalahan: {e}")
 
 # 5. UI Form
-# Menggunakan key="user_input" agar bisa diakses oleh fungsi clear_text
 with st.form("chat_form", clear_on_submit=False):
     user_text = st.text_area(
         "Tanyakan sesuatu tentang Poltesa:",
-        placeholder="Halo Sobat Poltesa! Saya Sivita, Asisten Virtual Resmi Politeknik Negeri Sambas. Ada yang bisa saya bantu hari ini?",
+        placeholder="Halo Sobat Poltesa! Saya Sivita, ada yang bisa saya bantu hari ini?",
         key="user_input" 
     )
     
-    col1, col2 = st.columns([1, 5])
+    # Mengatur kolom agar tombol berdampingan
+    # Menggunakan rasio [1, 1] atau angka kecil agar tetap sejajar di HP
+    col1, col2 = st.columns([1, 1.5]) 
+    
     with col1:
-        submitted = st.form_submit_button("Kirim")
+        submitted = st.form_submit_button("Kirim", use_container_width=True)
     with col2:
-        # Tombol Clear menggunakan on_click untuk mereset session state
-        clear_button = st.form_submit_button("Hapus Chat", on_click=clear_text)
+        # Tombol Hapus Chat diletakkan di samping dengan lebar penuh di dalam kolomnya
+        st.form_submit_button("Hapus Chat", on_click=clear_text, use_container_width=True)
     
     if submitted:
         if user_text.strip() == "":
@@ -114,6 +116,7 @@ with st.form("chat_form", clear_on_submit=False):
 # Footer sederhana
 st.markdown("---")
 st.caption("Sumber data: poltesa.ac.id & Quipper Campus")
+
 
 
 
