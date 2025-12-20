@@ -5,3 +5,4 @@ langchain-google-genai
 
 langchain-core
 beautifulsoup4
+langchain-openai
