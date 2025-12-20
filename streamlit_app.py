@@ -2,60 +2,74 @@ import streamlit as st
 import os
 from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.messages import SystemMessage, HumanMessage
-# IMPORT FUNGSI DARI FILE SEBELAH
-from scraper import get_data_kerjasama
 
-# Memuat variabel dari file .env
+# 1. Load Environment Variables
 load_dotenv()
 api_key = os.getenv("GOOGLE_API_KEY")
 
+# 2. Konfigurasi Halaman
+st.set_page_config(page_title="Asisten POLTESA", page_icon="🎓")
+st.title("🎓 Asisten Virtual Poltesa")
+
+# 3. Fungsi Load Prompt
 def load_system_prompt(file_path):
     try:
         with open(file_path, "r", encoding="utf-8") as f:
             return f.read()
     except FileNotFoundError:
-        return "Anda adalah asisten virtual POLTESA."
+        st.error(f"File {file_path} tidak ditemukan!")
+        return ""
 
-st.set_page_config(page_title="Asisten POLTESA", page_icon="🎓")
-st.title("🎓 Asisten Virtual Poltesa")
-
-def generate_response(input_text):
+# 4. Fungsi Generate Response
+def generate_response(user_input):
     if not api_key:
-        st.error("API Key tidak ditemukan!")
+        st.error("API Key tidak ditemukan di file .env!")
         return
 
-    # 1. Panggil fungsi dari scraper.py
-    data_tambahan = get_data_kerjasama()
-    
-    # 2. Ambil instruksi dasar
-    instruction_base = load_system_prompt("prompt.txt")
-    
-    # 3. Gabungkan instruksi dengan data scraping agar AI tahu
-    full_instruction = f"{instruction_base}\n\nBerikut adalah data mitra kerjasama terbaru:\n{data_tambahan}"
-
+    # Inisialisasi Model dengan Temperature 0 (Sangat Kaku)
     model = ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash", # Gunakan 1.5 flash jika 2.5 belum tersedia di library Anda
+        model="gemini-1.5-flash", 
         google_api_key=api_key,
         temperature=0.0
     )
     
-    messages = [
-        SystemMessage(content=full_instruction),
-        HumanMessage(content=input_text)
-    ]
+    # Ambil instruksi dari file txt
+    instruction = load_system_prompt("prompt.txt")
+    
+    # Teknik Gabungkan instruksi dan input user dalam satu string (Prompt Engineering)
+    # Ini memaksa model membaca data instruksi tepat sebelum menjawab
+    final_prompt = f"""
+    INSTRUCTIONS:
+    {instruction}
+    
+    USER QUESTION:
+    {user_input}
+    
+    YOUR ANSWER:
+    """
     
     try:
-        response = model.invoke(messages)
+        response = model.invoke(final_prompt)
+        # Menampilkan hasil dengan kotak informasi
         st.info(response.content)
     except Exception as e:
-        st.error(f"Terjadi kesalahan: {e}")
+        st.error(f"Terjadi kesalahan saat menghubungi AI: {e}")
 
-with st.form("my_form"):
-    text = st.text_area("Tanyakan seputar Poltesa:")
-    submitted = st.form_submit_button("Tanya")
+# 5. UI Form
+with st.form("chat_form"):
+    user_text = st.text_area(
+        "Tanyakan sesuatu tentang Poltesa:",
+        placeholder="Siapa direktur Poltesa?"
+    )
+    submitted = st.form_submit_button("Kirim Pertanyaan")
     
     if submitted:
-        generate_response(text)
+        if user_text.strip() == "":
+            st.warning("Mohon masukkan pertanyaan terlebih dahulu.")
+        else:
+            with st.spinner("Mencari data resmi..."):
+                generate_response(user_text)
 
-
+# Footer sederhana
+st.markdown("---")
+st.caption("Sumber data: poltesa.ac.id & Quipper Campus")
