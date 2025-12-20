@@ -1,5 +1,6 @@
 import streamlit as st
 import os
+import pandas as pd
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 
@@ -30,6 +31,16 @@ st.markdown("""
 
 st.title("🎓 Asisten Virtual Poltesa (Sivita)")
 
+# --- FUNGSI: AMBIL DATA GOOGLE SHEETS ---
+def get_sheet_data():
+    try:
+        if "SHEET_URL" in st.secrets:
+            df = pd.read_csv(st.secrets["SHEET_URL"])
+            return df.to_string(index=False)
+        return ""
+    except Exception:
+        return ""
+
 # --- FUNGSI: CLEAR INPUT ---
 def clear_text():
     st.session_state["user_input"] = ""
@@ -51,12 +62,14 @@ def generate_response(user_input):
     try:
         api_key_secret = st.secrets["OPENROUTER_API_KEY"]
         instruction = st.secrets["SYSTEM_PROMPT"]
+        # Mengambil data dari Google Sheets
+        additional_data = get_sheet_data()
     except KeyError:
         st.error("Konfigurasi Secrets tidak ditemukan!")
         return
 
     model = ChatOpenAI(
-        model="google/gemini-2.5-flash-lite", 
+        model="google/gemini-2.0-flash-lite-preview-02-05", 
         openai_api_key=api_key_secret,
         openai_api_base="https://openrouter.ai/api/v1",
         temperature=0.0,
@@ -69,6 +82,9 @@ def generate_response(user_input):
     # Menambahkan instruksi pemformatan agar link menjadi rapi (Markdown)
     final_prompt = f"""
     {instruction}
+
+    ### DATA TAMBAHAN DARI GOOGLE SHEETS ###
+    {additional_data}
 
     ATURAN TAMBAHAN PEMFORMATAN:
     - Gunakan format [Nama Link](URL) untuk semua tautan agar rapi.
@@ -85,15 +101,14 @@ def generate_response(user_input):
         response = model.invoke(final_prompt)
         
         if response and response.content:
-            # Menggunakan st.markdown agar link "Hubungi Kami" dan sosial media bisa diklik dengan rapi
             st.chat_message("assistant").markdown(response.content)
         else:
             st.warning("AI tidak dapat merumuskan jawaban.")
             
     except Exception as e:
         error_msg = str(e)
-        if "429" in error_msg:
-            st.error("Limit API tercapai. Silakan cek saldo OpenRouter Anda.")
+        if "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg:
+            st.error("Kami sedang mengalami Gangguan Teknis (Limit Tercapai). Silakan coba beberapa menit lagi atau akses: www.poltesa.ac.id")
         else:
             st.error(f"Terjadi kesalahan teknis: {e}")
 
