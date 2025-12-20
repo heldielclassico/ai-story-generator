@@ -27,7 +27,6 @@ def load_system_prompt(file_path):
     except Exception as e:
         st.error(f"Gagal membaca file prompt: {e}")
         return ""
-
 # 4. Fungsi Generate Response
 def generate_response(user_input):
     if not api_key:
@@ -35,35 +34,48 @@ def generate_response(user_input):
         return
 
     model = ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash", 
+        model="gemini-1.5-flash", 
         google_api_key=api_key,
         temperature=0.0
     )
     
     instruction = load_system_prompt("prompt.txt")
     
-    final_prompt = f"""
-    INSTRUCTIONS:
-    {instruction}
-    
-    USER QUESTION:
-    {user_input}
-    
-    YOUR ANSWER:
-    """
+    final_prompt = f"INSTRUCTIONS:\n{instruction}\n\nUSER QUESTION:\n{user_input}\n\nYOUR ANSWER:"
     
     try:
-        # Mencoba memanggil Gemini
         response = model.invoke(final_prompt)
         st.info(response.content)
     except Exception as e:
         error_msg = str(e)
         if "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg:
-            # 1. Tampilkan pesan error sesuai permintaan Anda
             st.error("Kami sedang mengalami Gangguan Teknis. Silakan coba beberapa menit lagi.")
             
-            # 2. Langsung tampilkan isi prompt.txt tanpa pesan tambahan
-            st.write(instruction)
+            # --- LOGIKA PENCARIAN SEDERHANA (FALLBACK) ---
+            if instruction:
+                lines = instruction.split('\n')
+                # Mengambil baris tanggal update (biasanya di baris awal statistik)
+                update_info = next((line for line in lines if "Update" in line), "")
+                
+                # Mencari baris yang mengandung kata kunci dari pertanyaan user
+                keywords = user_input.lower().split()
+                relevant_info = []
+                
+                for line in lines:
+                    # Jika baris mengandung kata kunci (misal: "alumni")
+                    if any(word in line.lower() for word in keywords if len(word) > 3):
+                        relevant_info.append(line)
+                
+                # Tampilkan hasil filter
+                if update_info:
+                    st.write(f"**{update_info}**")
+                
+                if relevant_info:
+                    for info in relevant_info:
+                        st.write(info)
+                else:
+                    # Jika tidak ketemu kata kunci spesifik, baru tampilkan pesan default
+                    st.write("Silakan hubungi admin untuk informasi lebih lanjut.")
         else:
             st.error(f"Terjadi kesalahan saat menghubungi AI: {e}")
 
@@ -93,5 +105,6 @@ with st.form("chat_form", clear_on_submit=False):
 # Footer sederhana
 st.markdown("---")
 st.caption("Sumber data: poltesa.ac.id & Quipper Campus")
+
 
 
