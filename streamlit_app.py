@@ -34,47 +34,55 @@ def generate_response(user_input):
         st.error("API Key tidak ditemukan di file .env!")
         return
 
-    # Memuat konten prompt.txt sebagai basis data utama AI
+    # Memuat konten prompt.txt
     instruction = load_system_prompt("prompt.txt")
     
     # Inisialisasi Model Gemini 2.5 Flash
     model = ChatGoogleGenerativeAI(
         model="gemini-2.5-flash", 
         google_api_key=api_key,
-        temperature=0.0
+        temperature=0.0  # Wajib 0.0 agar jawaban tidak melebar/kreatif
     )
     
-    # Menyusun instruksi ketat (System Instruction)
+    # Teknik Grounding Ketat: Membatasi AI agar tidak menggunakan pengetahuan luar
     final_prompt = f"""
-    ROLE: Anda adalah Sivita, Asisten Virtual Resmi Politeknik Negeri Sambas (POLTESA).
-    
-    REFERENSI DATA WAJIB:
+    SISTEM: 
+    Anda adalah Sivita, Asisten Virtual resmi POLTESA. 
+    Tugas Anda adalah menjawab pertanyaan pengguna HANYA berdasarkan DATA REFERENSI di bawah ini.
+
+    DATA REFERENSI:
+    ---
     {instruction}
-    
-    ATURAN JAWABAN:
-    1. Anda WAJIB menjawab pertanyaan hanya berdasarkan REFERENSI DATA WAJIB di atas.
-    2. Jika pertanyaan mengenai statistik (alumni, maba, prodi), gunakan data tepat sesuai referensi.
-    3. Jika informasi TIDAK ADA dalam referensi, katakan dengan sopan bahwa data tersebut belum tersedia di database resmi saat ini.
-    4. DILARANG berhalusinasi atau menggunakan informasi dari luar data yang diberikan.
-    
-    USER QUESTION:
+    ---
+
+    ATURAN KETAT:
+    1. Gunakan HANYA informasi yang tersedia di DATA REFERENSI untuk menjawab.
+    2. Jika pertanyaan pengguna tidak dapat dijawab menggunakan DATA REFERENSI, jawablah: "Maaf, informasi tersebut saat ini tidak tersedia dalam database resmi kami."
+    3. DILARANG memberikan jawaban berdasarkan pengetahuan umum atau data di luar teks di atas.
+    4. Jawablah secara langsung, singkat, dan profesional.
+
+    PERTANYAAN PENGGUNA: 
     {user_input}
-    
-    YOUR ANSWER:
+
+    JAWABAN:
     """
     
     try:
         # Menghubungi Gemini
         response = model.invoke(final_prompt)
-        st.info(response.content)
         
+        # Validasi sederhana: Jika jawaban kosong atau error
+        if response and response.content:
+            st.info(response.content)
+        else:
+            st.warning("AI tidak dapat merumuskan jawaban berdasarkan data yang tersedia.")
+            
     except Exception as e:
         error_msg = str(e)
-        # Jika limit tercapai, tampilkan hanya pesan error
         if "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg:
             st.error("Kami sedang mengalami Gangguan Teknis (Limit Kuota). Silakan coba beberapa menit lagi.")
         else:
-            st.error(f"Terjadi kesalahan saat menghubungi AI: {e}")
+            st.error(f"Terjadi kesalahan teknis: {e}")
 
 # 5. UI Form
 with st.form("chat_form", clear_on_submit=False):
@@ -102,3 +110,4 @@ with st.form("chat_form", clear_on_submit=False):
 # Footer
 st.markdown("---")
 st.caption("Sumber data: poltesa.ac.id & Database Internal Poltesa")
+
