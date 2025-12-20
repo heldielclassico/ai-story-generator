@@ -35,7 +35,7 @@ def generate_response(input_text):
     full_instruction = f"{instruction_base}\n\nBerikut adalah data mitra kerjasama terbaru:\n{data_tambahan}"
 
     model = ChatGoogleGenerativeAI(
-        model="gemini-1.5-flash", # Gunakan 1.5 flash jika 2.5 belum tersedia di library Anda
+        model="gemini-2.5-flash-lite", # Gunakan 1.5 flash jika 2.5 belum tersedia di library Anda
         google_api_key=api_key,
         temperature=0.0
     )
@@ -57,3 +57,4 @@ with st.form("my_form"):
     
     if submitted:
         generate_response(text)
+
