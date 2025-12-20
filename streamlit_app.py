@@ -80,7 +80,7 @@ def generate_response(user_input):
     except Exception as e:
         error_msg = str(e)
         if "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg:
-            st.error("Kami sedang mengalami Gangguan Teknis (Limit Kuota). Silakan coba beberapa menit lagi.")
+            st.error("Kami sedang mengalami Gangguan Teknis. Silakan coba beberapa menit lagi.. Anda juga mengakses ke halaman Resmi POLTESA : www.poltesa.ac.id")
         else:
             st.error(f"Terjadi kesalahan teknis: {e}")
 
@@ -110,6 +110,7 @@ with st.form("chat_form", clear_on_submit=False):
 # Footer
 st.markdown("---")
 st.caption("Sumber data: poltesa.ac.id & Database Internal Poltesa")
+
 
 
 
