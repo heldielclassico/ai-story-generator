@@ -4,9 +4,8 @@ from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-import pyperclip
 
-# 1. Load environment variables
+# 1. Load environment variables (untuk lokal)
 load_dotenv()
 
 # Konfigurasi Halaman
@@ -16,15 +15,14 @@ st.set_page_config(page_title="AI Story Generator", page_icon="📖", layout="ce
 st.title("📖 Generator Cerita Sederhana")
 st.markdown("Masukkan topik dan biarkan AI merangkai cerita untukmu.")
 
-# 2. Ambil API key
+# 2. Ambil API key (dari .env lokal atau Secrets online)
 google_api_key = os.getenv("GOOGLE_API_KEY")
 
 if google_api_key:
     os.environ['GOOGLE_API_KEY'] = google_api_key
 
-    # Inisialisasi Model & Chain
-    # Catatan: Menggunakan gemini-2.5-flash untuk stabilitas
-    llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.7)
+    # Inisialisasi Model & Chain (Gemini 1.5 Flash adalah versi paling stabil)
+    llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.7)
     template_text = "Buat cerita menarik tentang {topik}. Gunakan gaya bahasa yang kreatif dan mudah dipahami dalam Bahasa Indonesia."
     prompt = PromptTemplate.from_template(template_text)
     output_parser = StrOutputParser()
@@ -36,7 +34,7 @@ if google_api_key:
         if "hasil_cerita" in st.session_state:
             del st.session_state["hasil_cerita"]
 
-    # 3. Input Pengguna (Text Area agar bisa di-resize)
+    # 3. Input Pengguna (Resizable Text Area)
     topik = st.text_area(
         "Masukkan topik cerita:", 
         placeholder="Contoh: Petualangan kucing di ruang angkasa...",
@@ -57,8 +55,9 @@ if google_api_key:
         if topik:
             with st.spinner("Sedang menulis cerita..."):
                 try:
-                    st.session_state.hasil_cerita = chain.invoke({"topik": topik})
-                    st.session_state.current_topic = topik[:20] # Simpan potongan topik untuk nama file
+                    hasil = chain.invoke({"topik": topik})
+                    st.session_state.hasil_cerita = hasil
+                    st.session_state.current_topic = topik[:20] 
                 except Exception as e:
                     st.error(f"Terjadi kesalahan: {e}")
         else:
@@ -66,21 +65,24 @@ if google_api_key:
 
     st.divider()
 
-    # 4. Menampilkan Hasil dengan Tombol Sejajar dan Sama Besar
+    # 4. Menampilkan Hasil dengan Tombol Sejajar (Versi Cloud Friendly)
     if "hasil_cerita" in st.session_state:
         cerita = st.session_state.hasil_cerita
         topik_save = st.session_state.get("current_topic", "cerita")
 
-        # Layout Baris Hasil: Judul (Kiri), Copy & Save (Kanan)
+        # Layout Baris Hasil
         col_judul, col_copy, col_dl = st.columns([2, 0.5, 0.5])
 
         with col_judul:
             st.subheader("Hasil Cerita")
         
         with col_copy:
+            # Fitur Copy menggunakan JavaScript agar tidak error di Cloud
             if st.button("📋 Copy", use_container_width=True):
-                pyperclip.copy(cerita)
-                st.toast("Tersalin!", icon="✅")
+                # Menjalankan script di browser pengguna
+                js_code = f"navigator.clipboard.writeText(`{cerita}`)"
+                st.components.v1.html(f"<script>{js_code}</script>", height=0)
+                st.toast("Tersalin ke Clipboard!", icon="✅")
 
         with col_dl:
             st.download_button(
@@ -91,11 +93,11 @@ if google_api_key:
                 use_container_width=True
             )
 
-        # Area Teks Hasil Cerita (Juga bisa di-resize)
+        # Area Teks Hasil Cerita (Resizable)
         st.text_area("", cerita, height=400, label_visibility="collapsed")
 
 else:
-    st.error("Google API Key tidak ditemukan. Periksa file .env Anda.")
+    st.error("Google API Key tidak ditemukan. Jika sudah online, masukkan API Key di 'Settings > Secrets' di dashboard Streamlit.")
 
 # Footer
 st.caption("Dibuat dengan Streamlit & LangChain")
