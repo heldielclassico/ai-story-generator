@@ -21,8 +21,8 @@ google_api_key = os.getenv("GOOGLE_API_KEY")
 if google_api_key:
     os.environ['GOOGLE_API_KEY'] = google_api_key
 
-    # Inisialisasi Model & Chain (Gemini 1.5 Flash adalah versi paling stabil)
-    llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.7)
+    # Inisialisasi Model & Chain (Gemini 2.5 Flash adalah versi paling stabil)
+    llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.7)
     template_text = "Buat cerita menarik tentang {topik}. Gunakan gaya bahasa yang kreatif dan mudah dipahami dalam Bahasa Indonesia."
     prompt = PromptTemplate.from_template(template_text)
     output_parser = StrOutputParser()
@@ -101,3 +101,4 @@ else:
 
 # Footer
 st.caption("Dibuat dengan Streamlit & LangChain")
+
