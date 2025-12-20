@@ -38,7 +38,7 @@ def generate_response(user_input):
     
     # Inisialisasi Model
     model = ChatGoogleGenerativeAI(
-        model="gemini-1.5-flash", # Disarankan menggunakan 1.5-flash untuk kestabilan
+        model="gemini-2.5-flash", # Disarankan menggunakan 1.5-flash untuk kestabilan
         google_api_key=api_key,
         temperature=0.0
     )
@@ -114,6 +114,7 @@ with st.form("chat_form", clear_on_submit=False):
 # Footer sederhana
 st.markdown("---")
 st.caption("Sumber data: poltesa.ac.id & Quipper Campus")
+
 
 
 
