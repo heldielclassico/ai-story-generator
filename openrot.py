@@ -29,44 +29,31 @@ def load_system_prompt(file_path):
         st.error(f"Gagal membaca file prompt: {e}")
         return ""
 
-# 4. Fungsi Generate Response (OpenRouter Version)
+# --- 4. Fungsi Generate Response (Menggunakan st.secrets) ---
 def generate_response(user_input):
-    if not api_key:
-        st.error("API Key OpenRouter tidak ditemukan di file .env!")
+    # Mengambil API Key dan Prompt dari Streamlit Secrets secara aman
+    try:
+        api_key = st.secrets["OPENROUTER_API_KEY"]
+        instruction = st.secrets["SYSTEM_PROMPT"]
+    except KeyError:
+        st.error("Konfigurasi Secrets (API Key atau Prompt) tidak ditemukan!")
         return
 
-    # Memuat konten data referensi dari prompt.txt
-    instruction = load_system_prompt("prompt.txt")
-    
     # Inisialisasi Model melalui OpenRouter
-    # Anda bisa mengganti model ke "google/gemini-2.0-flash-exp:free" atau lainnya
     model = ChatOpenAI(
-        model="google/gemini-2.5-flash-lite", 
+        model="google/gemini-2.5-flash-lite:free", 
         openai_api_key=api_key,
         openai_api_base="https://openrouter.ai/api/v1",
         temperature=0.0,
         default_headers={
-            "HTTP-Referer": "http://localhost:8501", # Opsional
-            "X-Title": "Asisten Poltesa"            # Opsional
+            "HTTP-Referer": "http://localhost:8501", 
+            "X-Title": "Asisten Poltesa"            
         }
     )
     
-    # Teknik Grounding Ketat
+    # Teknik Grounding Ketat dengan data dari Secrets
     final_prompt = f"""
-    SISTEM: 
-    Anda adalah Sivita, Asisten Virtual resmi POLTESA. 
-    Tugas Anda adalah menjawab pertanyaan pengguna HANYA berdasarkan DATA REFERENSI di bawah ini.
-
-    DATA REFERENSI:
-    ---
     {instruction}
-    ---
-
-    ATURAN KETAT:
-    1. Gunakan HANYA informasi yang tersedia di DATA REFERENSI untuk menjawab.
-    2. Jika pertanyaan pengguna tidak dapat dijawab menggunakan DATA REFERENSI, jawablah: "Maaf, informasi tersebut saat ini tidak tersedia dalam database resmi kami."
-    3. DILARANG memberikan jawaban berdasarkan pengetahuan umum atau data di luar teks di atas.
-    4. Jawablah secara langsung, singkat, dan profesional.
 
     PERTANYAAN PENGGUNA: 
     {user_input}
@@ -89,7 +76,6 @@ def generate_response(user_input):
             st.error("Limit API tercapai atau saldo OpenRouter habis. Silakan cek akun Anda.")
         else:
             st.error(f"Terjadi kesalahan teknis: {e}")
-
 # 5. UI Form
 with st.form("chat_form", clear_on_submit=False):
     user_text = st.text_area(
@@ -115,4 +101,5 @@ with st.form("chat_form", clear_on_submit=False):
 # Footer
 st.markdown("---")
 st.caption("Sumber data: poltesa.ac.id & Database Internal Poltesa | Powered by OpenRouter")
+
 
