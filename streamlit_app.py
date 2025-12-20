@@ -68,7 +68,7 @@ def generate_response(user_input):
 with st.form("chat_form"):
     user_text = st.text_area(
         "Tanyakan sesuatu tentang Poltesa:",
-        placeholder="Siapa direktur Poltesa?"
+        placeholder="Halo Sobat Poltesa! Saya Sivita, Asisten Virtual Resmi Politeknik Negeri Sambas. Ada yang bisa saya bantu hari ini?"
     )
     submitted = st.form_submit_button("Kirim Pertanyaan")
     
@@ -82,3 +82,4 @@ with st.form("chat_form"):
 # Footer sederhana
 st.markdown("---")
 st.caption("Sumber data: poltesa.ac.id & Quipper Campus")
+
