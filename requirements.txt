@@ -2,4 +2,6 @@ streamlit
 langchain
 python-dotenv
 langchain-google-genai
+
 langchain-core
+beautifulsoup4
