@@ -11,6 +11,10 @@ api_key = os.getenv("GOOGLE_API_KEY")
 st.set_page_config(page_title="Asisten POLTESA", page_icon="🎓")
 st.title("🎓 Asisten Virtual Poltesa")
 
+# --- FUNGSI BARU: CLEAR INPUT ---
+def clear_text():
+    st.session_state["user_input"] = ""
+
 # 3. Fungsi Load Prompt
 def load_system_prompt(file_path):
     try:
@@ -30,18 +34,14 @@ def generate_response(user_input):
         st.error("API Key tidak ditemukan di file .env!")
         return
 
-    # Inisialisasi Model
-    # Catatan: Jika gemini-2.5-flash sering limit, Anda bisa ganti ke gemini-1.5-flash
     model = ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash", 
+        model="gemini-1.5-flash", # Note: Pastikan nama model sesuai (misal: gemini-1.5-flash)
         google_api_key=api_key,
         temperature=0.0
     )
     
-    # Ambil instruksi dari file txt
     instruction = load_system_prompt("prompt.txt")
     
-    # Gabungkan instruksi dan input user (Prompt Wrapping)
     final_prompt = f"""
     INSTRUCTIONS:
     {instruction}
@@ -56,21 +56,27 @@ def generate_response(user_input):
         response = model.invoke(final_prompt)
         st.info(response.content)
     except Exception as e:
-        # Menangkap error kuota habis (Rate Limit)
         error_msg = str(e)
         if "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg:
             st.error("Kami sedang mengalami Gangguan Teknis. Silakan coba beberapa menit lagi.")
         else:
-            # Menampilkan pesan error lainnya untuk keperluan debugging
             st.error(f"Terjadi kesalahan saat menghubungi AI: {e}")
 
 # 5. UI Form
-with st.form("chat_form"):
+# Menggunakan key="user_input" agar bisa diakses oleh fungsi clear_text
+with st.form("chat_form", clear_on_submit=False):
     user_text = st.text_area(
         "Tanyakan sesuatu tentang Poltesa:",
-        placeholder="Halo Sobat Poltesa! Saya Sivita, Asisten Virtual Resmi Politeknik Negeri Sambas. Ada yang bisa saya bantu hari ini?"
+        placeholder="Halo Sobat Poltesa! Saya Sivita, Asisten Virtual Resmi Politeknik Negeri Sambas. Ada yang bisa saya bantu hari ini?",
+        key="user_input" 
     )
-    submitted = st.form_submit_button("Kirim Pertanyaan")
+    
+    col1, col2 = st.columns([1, 5])
+    with col1:
+        submitted = st.form_submit_button("Kirim")
+    with col2:
+        # Tombol Clear menggunakan on_click untuk mereset session state
+        clear_button = st.form_submit_button("Hapus Chat", on_click=clear_text)
     
     if submitted:
         if user_text.strip() == "":
@@ -82,4 +88,3 @@ with st.form("chat_form"):
 # Footer sederhana
 st.markdown("---")
 st.caption("Sumber data: poltesa.ac.id & Quipper Campus")
-
