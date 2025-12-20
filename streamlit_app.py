@@ -34,52 +34,72 @@ def generate_response(user_input):
         st.error("API Key tidak ditemukan di file .env!")
         return
 
+    # Memuat database teks dari prompt.txt
     instruction = load_system_prompt("prompt.txt")
     
-    # --- PRIORITAS 1: PENCARIAN MANUAL DI PROMPT.TXT ---
+    # --- ALUR 1: PRIORITAS PENCARIAN DINAMIS DI PROMPT.TXT ---
     found_locally = False
     if instruction:
         lines = instruction.split('\n')
+        # Mencari baris yang mengandung tanggal update data
         update_info = next((line for line in lines if "Update" in line), "")
         
-        # Mencari kata kunci penting dari input user (misal: "alumni", "mahasiswa", "prodi")
-        keywords = ["alumni", "mahasiswa", "prodi", "dosen", "tendik", "penelitian", "kerjasama", "pkm"]
-        user_query_lower = user_input.lower()
+        # Membersihkan input user menjadi kata kunci (tokenizing)
+        # Menghapus kata tanya umum agar pencarian lebih akurat
+        stop_words = ["apa", "berapa", "siapa", "dimana", "mana", "bagaimana", "adalah", "tentang", "jumlah", "ada", "kah"]
+        query_words = [word.lower() for word in user_input.split() if word.lower() not in stop_words and len(word) > 2]
         
         relevant_info = []
         for line in lines:
-            # Jika baris mengandung kata kunci yang ditanyakan user
-            for key in keywords:
-                if key in user_query_lower and key in line.lower():
-                    relevant_info.append(line)
+            # Mencocokkan kata kunci user dengan setiap baris di prompt.txt
+            if any(word in line.lower() for word in query_words):
+                # Validasi: Pastikan baris mengandung data (ditandai dengan ':' atau '-')
+                # dan bukan baris instruksi sistem/identitas AI
+                if (":" in line or "-" in line) and "Anda adalah" not in line:
+                    relevant_info.append(line.strip())
                     found_locally = True
 
-        # Jika ditemukan di prompt.txt, tampilkan hasilnya
+        # Jika ditemukan hasil yang cocok di lokal, tampilkan dan BERHENTI (tidak panggil Gemini)
         if found_locally:
             if update_info:
                 st.write(f"**{update_info}**")
-            for info in relevant_info:
+            
+            # Menggunakan list(set()) untuk menghindari duplikasi baris
+            for info in list(set(relevant_info)):
                 st.info(info)
-            return  # Berhenti di sini, tidak perlu panggil Gemini
+            return 
 
-    # --- PRIORITAS 2: JIKA TIDAK ADA DI PROMPT.TXT, BARU PAKAI GEMINI ---
+    # --- ALUR 2: JIKA TIDAK DITEMUKAN DI LOKAL, BARU AKTIFKAN GEMINI ---
+    # Ganti model ke "gemini-1.5-flash" (disarankan untuk kestabilan saat ini)
     model = ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash-lite", 
+        model="gemini-1.5-flash", 
         google_api_key=api_key,
         temperature=0.0
     )
     
-    final_prompt = f"INSTRUCTIONS:\n{instruction}\n\nUSER QUESTION:\n{user_input}\n\nYOUR ANSWER:"
+    final_prompt = f"""
+    INSTRUCTIONS:
+    {instruction}
+    
+    USER QUESTION:
+    {user_input}
+    
+    YOUR ANSWER:
+    """
     
     try:
         response = model.invoke(final_prompt)
         st.info(response.content)
     except Exception as e:
         error_msg = str(e)
+        # Jika Gemini terkena limit (429)
         if "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg:
             st.error("Kami sedang mengalami Gangguan Teknis. Silakan coba beberapa menit lagi.")
+            # Fallback terakhir: Menampilkan isi prompt.txt jika AI gagal total
+            with st.expander("Klik untuk melihat database informasi manual"):
+                st.write(instruction)
         else:
-            st.error(f"Terjadi kesalahan: {e}")
+            st.error(f"Terjadi kesalahan saat menghubungi AI: {e}")
 
 # 5. UI Form
 # Menggunakan key="user_input" agar bisa diakses oleh fungsi clear_text
@@ -107,5 +127,6 @@ with st.form("chat_form", clear_on_submit=False):
 # Footer sederhana
 st.markdown("---")
 st.caption("Sumber data: poltesa.ac.id & Quipper Campus")
+
 
 
