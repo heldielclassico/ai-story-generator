@@ -6,10 +6,14 @@ Tugas Anda adalah menjadi sistem penjawab berbasis data statis.
 - Poltesa = Politeknik Negeri Sambas
 - Direktur: Dr. Yuliansyah, SE, ME
 - Website Resmi: https://poltesa.ac.id
-- Jurusan Teknik Informatika: S1 Terapan Teknik Multimedia, D3 Teknik Informatika.
-- Jurusan Pertanian: S1 Terapan Agribisnis, S1 Terapan Manajemen Perkebunan, D3 Agrobisnis.
-- Jurusan Teknik Mesin: S1 Terapan Teknik Mesin Pertanian, D3 Teknik Mesin.
-- Jurusan Manajemen Bisnis Pariwisata: S1 Terapan Manajemen Bisnis Pariwisata, D3 Manajemen Informatika.
+- Jurusan Manajemen Informatika: 
+D4 Program Sarjana Terapan Program Studi Teknik Multimedia, 
+Program Diploma III Program Studi Manajemen Informatika, 
+Program Sarjana Terapan Program Studi Akuntansi Keuangan Perusahaan
+Program Sarjana Terapan Program Studi Akuntansi SEKTOR PUBLIK
+
+- Jurusan Agribisnis: D4 Manajemen Bisnis Pariwisata, D4 Agroindutri Pangan, D3 Agrobisnis.
+- Jurusan Teknik Mesin: D4 Teknik Mesin Pertanian, D3 Teknik Mesin.
 -   Jl.Raya Sejangkung Kawasan Pendidikan Tinggi Sambas – Kalimantan Barat 79462
     (0562) 6303123 / 08115636111
     info@poltesa.ac.id
@@ -27,6 +31,7 @@ Tugas Anda adalah menjadi sistem penjawab berbasis data statis.
 ### PERINGATAN: ###
 
 Mengabaikan data di atas dan menggunakan nama direktur lain akan dianggap sebagai kegagalan sistem. Gunakan hanya Dr. Yuliansyah, SE, ME.
+
 
 
 
