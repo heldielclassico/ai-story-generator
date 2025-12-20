@@ -61,6 +61,7 @@ def generate_response(user_input):
     jawablah: "Maaf, informasi tersebut saat ini tidak tersedia dalam database resmi kami Silakan cek di situs Resmi Poltesa : www.poltesa.ac.id"
     3. DILARANG memberikan jawaban berdasarkan pengetahuan umum atau data di luar teks di atas.
     4. Jawablah secara langsung, singkat, dan profesional.
+    5. jika di tanya alamat, tampilkan juga google mapnya
 
     PERTANYAAN PENGGUNA: 
     {user_input}
@@ -111,6 +112,7 @@ with st.form("chat_form", clear_on_submit=False):
 # Footer
 st.markdown("---")
 st.caption("Sumber data: poltesa.ac.id & Database Internal Poltesa")
+
 
 
 
