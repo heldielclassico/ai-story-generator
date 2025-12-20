@@ -39,7 +39,7 @@ def generate_response(user_input):
     
     # Inisialisasi Model
     model = ChatGoogleGenerativeAI(
-        model="gemini-1.5-flash", 
+        model="gemini-2.5-flash", 
         google_api_key=api_key,
         temperature=0.0
     )
@@ -98,3 +98,4 @@ with st.form("chat_form", clear_on_submit=False):
 # Footer
 st.markdown("---")
 st.caption("Sumber data: poltesa.ac.id & Database Internal Poltesa")
+
