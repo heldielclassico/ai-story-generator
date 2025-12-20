@@ -57,7 +57,8 @@ def generate_response(user_input):
 
     ATURAN KETAT:
     1. Gunakan HANYA informasi yang tersedia di DATA REFERENSI untuk menjawab.
-    2. Jika pertanyaan pengguna tidak dapat dijawab menggunakan DATA REFERENSI, jawablah: "Maaf, informasi tersebut saat ini tidak tersedia dalam database resmi kami."
+    2. Jika pertanyaan pengguna tidak dapat dijawab menggunakan DATA REFERENSI, 
+    jawablah: "Maaf, informasi tersebut saat ini tidak tersedia dalam database resmi kami.Silakan cek di situs Resmi Poltesa : www.poltesa.ac.id"
     3. DILARANG memberikan jawaban berdasarkan pengetahuan umum atau data di luar teks di atas.
     4. Jawablah secara langsung, singkat, dan profesional.
 
@@ -110,6 +111,7 @@ with st.form("chat_form", clear_on_submit=False):
 # Footer
 st.markdown("---")
 st.caption("Sumber data: poltesa.ac.id & Database Internal Poltesa")
+
 
 
 
