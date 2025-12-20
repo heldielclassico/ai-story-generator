@@ -3,11 +3,11 @@ import os
 from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import SystemMessage, HumanMessage
+# IMPORT FUNGSI DARI FILE SEBELAH
+from scraper import get_data_kerjasama
 
 # Memuat variabel dari file .env
 load_dotenv()
-
-# Mengambil API Key dari environment variable
 api_key = os.getenv("GOOGLE_API_KEY")
 
 def load_system_prompt(file_path):
@@ -21,21 +21,27 @@ st.set_page_config(page_title="Asisten POLTESA", page_icon="🎓")
 st.title("🎓 Asisten Virtual Poltesa")
 
 def generate_response(input_text):
-    # Validasi jika API Key tidak ditemukan
     if not api_key:
-        st.error("API Key tidak ditemukan! Pastikan file .env sudah dikonfigurasi.")
+        st.error("API Key tidak ditemukan!")
         return
 
+    # 1. Panggil fungsi dari scraper.py
+    data_tambahan = get_data_kerjasama()
+    
+    # 2. Ambil instruksi dasar
+    instruction_base = load_system_prompt("prompt.txt")
+    
+    # 3. Gabungkan instruksi dengan data scraping agar AI tahu
+    full_instruction = f"{instruction_base}\n\nBerikut adalah data mitra kerjasama terbaru:\n{data_tambahan}"
+
     model = ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash-lite", 
+        model="gemini-1.5-flash", # Gunakan 1.5 flash jika 2.5 belum tersedia di library Anda
         google_api_key=api_key,
         temperature=0.0
     )
     
-    instruction = load_system_prompt("prompt.txt")
-    
     messages = [
-        SystemMessage(content=instruction),
+        SystemMessage(content=full_instruction),
         HumanMessage(content=input_text)
     ]
     
