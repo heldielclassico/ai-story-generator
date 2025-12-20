@@ -5,11 +5,29 @@ from langchain_openai import ChatOpenAI
 
 # 1. Load Environment Variables
 load_dotenv()
-# Pastikan di file .env variabelnya adalah OPENROUTER_API_KEY
 api_key = os.getenv("OPENROUTER_API_KEY")
 
 # 2. Konfigurasi Halaman
 st.set_page_config(page_title="Asisten POLTESA", page_icon="🎓")
+
+# --- CSS Kustom untuk Merapikan Tampilan Mobile ---
+st.markdown("""
+    <style>
+    .stTextArea textarea {
+        border-radius: 10px;
+    }
+    .stButton button {
+        border-radius: 20px;
+    }
+    /* Memastikan link panjang tidak merusak layout */
+    a {
+        word-wrap: break-word;
+        text-decoration: none;
+        color: #007bff;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
 st.title("🎓 Asisten Virtual Poltesa (Sivita)")
 
 # --- FUNGSI: CLEAR INPUT ---
@@ -23,26 +41,23 @@ def load_system_prompt(file_path):
             with open(file_path, "r", encoding="utf-8") as f:
                 return f.read()
         else:
-            st.error(f"File {file_path} tidak ditemukan!")
             return ""
     except Exception as e:
         st.error(f"Gagal membaca file prompt: {e}")
         return ""
 
-# --- 4. Fungsi Generate Response (Menggunakan st.secrets) ---
+# --- 4. Fungsi Generate Response ---
 def generate_response(user_input):
-    # Mengambil API Key dan Prompt dari Streamlit Secrets secara aman
     try:
-        api_key = st.secrets["OPENROUTER_API_KEY"]
+        api_key_secret = st.secrets["OPENROUTER_API_KEY"]
         instruction = st.secrets["SYSTEM_PROMPT"]
     except KeyError:
-        st.error("Konfigurasi Secrets (API Key atau Prompt) tidak ditemukan!")
+        st.error("Konfigurasi Secrets tidak ditemukan!")
         return
 
-    # Inisialisasi Model melalui OpenRouter
     model = ChatOpenAI(
         model="google/gemini-2.5-flash-lite", 
-        openai_api_key=api_key,
+        openai_api_key=api_key_secret,
         openai_api_base="https://openrouter.ai/api/v1",
         temperature=0.0,
         default_headers={
@@ -51,9 +66,14 @@ def generate_response(user_input):
         }
     )
     
-    # Teknik Grounding Ketat dengan data dari Secrets
+    # Menambahkan instruksi pemformatan agar link menjadi rapi (Markdown)
     final_prompt = f"""
     {instruction}
+
+    ATURAN TAMBAHAN PEMFORMATAN:
+    - Gunakan format [Nama Link](URL) untuk semua tautan agar rapi.
+    - Jangan tampilkan URL mentah yang panjang.
+    - Gunakan bullet points untuk daftar.
 
     PERTANYAAN PENGGUNA: 
     {user_input}
@@ -62,20 +82,21 @@ def generate_response(user_input):
     """
     
     try:
-        # Menghubungi OpenRouter
         response = model.invoke(final_prompt)
         
         if response and response.content:
-            st.info(response.content)
+            # Menggunakan st.markdown agar link "Hubungi Kami" dan sosial media bisa diklik dengan rapi
+            st.chat_message("assistant").markdown(response.content)
         else:
-            st.warning("AI tidak dapat merumuskan jawaban berdasarkan data yang tersedia.")
+            st.warning("AI tidak dapat merumuskan jawaban.")
             
     except Exception as e:
         error_msg = str(e)
         if "429" in error_msg:
-            st.error("Limit API tercapai atau saldo OpenRouter habis. Silakan cek akun Anda.")
+            st.error("Limit API tercapai. Silakan cek saldo OpenRouter Anda.")
         else:
             st.error(f"Terjadi kesalahan teknis: {e}")
+
 # 5. UI Form
 with st.form("chat_form", clear_on_submit=False):
     user_text = st.text_area(
@@ -95,12 +116,9 @@ with st.form("chat_form", clear_on_submit=False):
         if user_text.strip() == "":
             st.warning("Mohon masukkan pertanyaan terlebih dahulu.")
         else:
-            with st.spinner("Mencari data resmi di database Poltesa..."):
+            with st.spinner("Mencari data resmi..."):
                 generate_response(user_text)
 
 # Footer
 st.markdown("---")
 st.caption("Sumber data: poltesa.ac.id & Database Internal Poltesa | Powered by OpenRouter")
-
-
-
