@@ -35,7 +35,7 @@ st.title("🎓 Asisten Virtual Poltesa (Sivita)")
 def get_sheet_data():
     all_data = ""
     # Daftar kunci yang Anda buat di Secrets tadi
-    sheet_keys = ["SHEET_URL_PROFIL", "SHEET_URL_JURUSAN"] 
+    sheet_keys = ["SHEET_URL_DATA", "SHEET_URL_PRESTASI"] 
     
     try:
         for key in sheet_keys:
@@ -146,6 +146,7 @@ with st.form("chat_form", clear_on_submit=False):
 # Footer
 st.markdown("---")
 st.caption("Sumber data: poltesa.ac.id & Database Internal Poltesa | Powered by OpenRouter")
+
 
 
 
