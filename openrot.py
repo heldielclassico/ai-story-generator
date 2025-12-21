@@ -33,12 +33,19 @@ st.title("🎓 Asisten Virtual Poltesa (Sivita)")
 
 # --- FUNGSI: AMBIL DATA GOOGLE SHEETS ---
 def get_sheet_data():
+    all_data = ""
+    # Daftar kunci yang Anda buat di Secrets tadi
+    sheet_keys = ["SHEET_URL_PROFIL", "SHEET_URL_JURUSAN"] 
+    
     try:
-        if "SHEET_URL" in st.secrets:
-            df = pd.read_csv(st.secrets["SHEET_URL"])
-            return df.to_string(index=False)
-        return ""
-    except Exception:
+        for key in sheet_keys:
+            if key in st.secrets:
+                # Membaca tiap URL satu per satu
+                df = pd.read_csv(st.secrets[key])
+                all_data += f"\n\n--- DATA {key} ---\n"
+                all_data += df.to_string(index=False)
+        return all_data
+    except Exception as e:
         return ""
 
 # --- FUNGSI: CLEAR INPUT ---
@@ -139,6 +146,7 @@ with st.form("chat_form", clear_on_submit=False):
 # Footer
 st.markdown("---")
 st.caption("Sumber data: poltesa.ac.id & Database Internal Poltesa | Powered by OpenRouter")
+
 
 
 
