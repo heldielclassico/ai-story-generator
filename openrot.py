@@ -61,7 +61,7 @@ def load_system_prompt(file_path):
         else:
             return ""
     except Exception as e:
-        st.error(f"Gagal membaca file prompt: {N)
+        st.error(f"Gagal membaca file prompt: {e}")
         return ""
 
 # --- 4. Fungsi Generate Response ---
@@ -146,6 +146,7 @@ with st.form("chat_form", clear_on_submit=False):
 # Footer
 st.markdown("---")
 st.caption("Sumber data: poltesa.ac.id & Database Internal Poltesa | Powered by OpenRouter")
+
 
 
 
