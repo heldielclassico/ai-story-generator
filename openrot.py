@@ -34,16 +34,14 @@ st.title("🎓 Asisten Virtual Poltesa (Sivita)")
 # --- FUNGSI: AMBIL DATA GOOGLE SHEETS ---
 def get_sheet_data():
     all_combined_data = ""
-    try:
-        # 1. Ambil URL utama dari secrets (pastikan ini URL tab 'sheetData' yang berisi daftar nama tab)
-        # Contoh di secrets: SHEET_CENTRAL_URL = "https://docs.google.com/spreadsheets/d/ID/export?format=csv&gid=123"
+    try:     
         central_url = st.secrets["SHEET_CENTRAL_URL"]
         df_list = pd.read_csv(central_url)
         
         # Ambil daftar nama tab dari kolom 'NamaTab'
         tab_names = df_list['NamaTab'].tolist()
         
-        # 2. Ambil Base URL (ID Spreadsheet)
+        # 2. Ambil Data
         # Kita ambil bagian ID-nya saja agar bisa ganti-ganti gid secara otomatis
         base_url = central_url.split('/export')[0]
         
@@ -162,6 +160,7 @@ with st.form("chat_form", clear_on_submit=False):
 # Footer
 st.markdown("---")
 st.caption("Sumber data: poltesa.ac.id & Database Internal Poltesa | Powered by OpenRouter")
+
 
 
 
