@@ -35,7 +35,7 @@ st.title("🎓 Asisten Virtual Poltesa (Sivita)")
 def get_sheet_data():
     all_data = ""
     # Daftar kunci yang Anda buat di Secrets tadi
-    sheet_keys = ["SHEET_URL_DATA", "SHEET_URL_PRESTASI"] 
+    sheet_keys = ["SHEET_URL_DATA", "SHEET_URL_JADWAL_DOSEN"] 
     
     try:
         for key in sheet_keys:
@@ -61,7 +61,7 @@ def load_system_prompt(file_path):
         else:
             return ""
     except Exception as e:
-        st.error(f"Gagal membaca file prompt: {e}")
+        st.error(f"Gagal membaca file prompt: {N)
         return ""
 
 # --- 4. Fungsi Generate Response ---
@@ -146,6 +146,7 @@ with st.form("chat_form", clear_on_submit=False):
 # Footer
 st.markdown("---")
 st.caption("Sumber data: poltesa.ac.id & Database Internal Poltesa | Powered by OpenRouter")
+
 
 
 
