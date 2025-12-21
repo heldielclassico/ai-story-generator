@@ -108,9 +108,9 @@ def generate_response(user_input):
     except Exception as e:
         error_msg = str(e)
         if "429" in error_msg:
-            st.error("Limit API tercapai. Silakan tunggu beberapa saat atau cek akun Anda.")
+            st.error("Mohon Maaf Kami sedang mengalami Gangguan Teknis. Silakan coba beberapa menit lagi..Web : https://poltesa.ac.id/")
         elif "402" in error_msg:
-            st.error("Saldo OpenRouter Anda tidak mencukupi atau kredit habis. Silakan isi ulang di https://openrouter.ai/settings/credits")
+            st.error("Mohon Maaf Kami sedang mengalami Gangguan Teknis. Silakan coba beberapa menit lagi.. Web : https://poltesa.ac.id/")
         else:
             st.error(f"Terjadi kesalahan teknis: {e}")
 
@@ -139,6 +139,7 @@ with st.form("chat_form", clear_on_submit=False):
 # Footer
 st.markdown("---")
 st.caption("Sumber data: poltesa.ac.id & Database Internal Poltesa | Powered by OpenRouter")
+
 
 
 
