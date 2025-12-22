@@ -2,7 +2,7 @@ import streamlit as st
 import os
 import pandas as pd
 import requests
-import re
+import re  # Library untuk validasi format email
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 
@@ -12,16 +12,9 @@ load_dotenv()
 # 2. Konfigurasi Halaman
 st.set_page_config(page_title="Asisten POLTESA", page_icon="🎓")
 
-# --- INISIALISASI SESSION STATE ---
-if "last_answer" not in st.session_state:
-    st.session_state["last_answer"] = ""
-if "last_question" not in st.session_state:
-    st.session_state["last_question"] = ""
-if "saved_email" not in st.session_state:
-    st.session_state["saved_email"] = ""
-
 # --- FUNGSI VALIDASI EMAIL ---
 def is_valid_email(email):
+    # Regex untuk memastikan format nama@gmail.com
     pattern = r'^[a-zA-Z0-9._%+-]+@gmail\.com$'
     return re.match(pattern, email) is not None
 
@@ -36,33 +29,46 @@ st.markdown("""
 
 st.title("🎓 Asisten Virtual Poltesa (Sivita)")
 
-# --- FUNGSI: SIMPAN LOG ---
+# --- FUNGSI: SIMPAN LOG KE GOOGLE SHEETS ---
 def save_to_log(email, question, answer=""):
     try:
         log_url = st.secrets["LOG_URL"]
-        payload = {"email": email, "question": question, "answer": answer}
+        payload = {
+            "email": email,
+            "question": question,
+            "answer": answer
+        }
         requests.post(log_url, json=payload, timeout=5)
     except Exception as e:
         print(f"Log Error: {e}")
 
-# --- FUNGSI: AMBIL DATA ---
+# --- FUNGSI: AMBIL DATA GOOGLE SHEETS ---
 def get_sheet_data():
+    all_combined_data = ""
     try:     
         central_url = st.secrets["SHEET_CENTRAL_URL"]
         df_list = pd.read_csv(central_url)
         tab_names = df_list['NamaTab'].tolist()
         base_url = central_url.split('/export')[0]
-        all_data = ""
+        
         for tab in tab_names:
             tab_url = f"{base_url}/gviz/tq?tqx=out:csv&sheet={tab.replace(' ', '%20')}"
             try:
                 df = pd.read_csv(tab_url)
-                all_data += f"\n\n### DATA {tab.upper()} ###\n{df.to_string(index=False)}"
-            except: continue 
-        return all_data
-    except: return ""
+                all_combined_data += f"\n\n### DATA {tab.upper()} ###\n{df.to_string(index=False)}"
+            except:
+                continue 
+        return all_combined_data
+    except:
+        return ""
 
-# --- FUNGSI: GENERATE RESPONSE ---
+# --- FUNGSI: HAPUS CHAT (Hanya Pertanyaan) ---
+def clear_text():
+    # Menghapus isi kolom pertanyaan saja
+    st.session_state["user_input"] = ""
+    # Email tetap dipertahankan, tidak dihapus dari session_state
+
+# --- 4. Fungsi Generate Response ---
 def generate_response(user_email, user_input):
     try:
         api_key_secret = st.secrets["OPENROUTER_API_KEY"]
@@ -78,60 +84,48 @@ def generate_response(user_email, user_input):
         
         final_prompt = f"{instruction}\n\nDATA: {additional_data}\n\nPERTANYAAN: {user_input}\n\nJAWABAN:"
         response = model.invoke(final_prompt)
-        return response.content if response else None
+        
+        if response and response.content:
+            st.chat_message("assistant").markdown(response.content)
+            # Simpan log pertanyaan dan jawaban AI
+            save_to_log(user_email, user_input, response.content)
     except Exception as e:
         st.error(f"Terjadi kesalahan teknis: {e}")
-        return None
 
-# --- UI FORM ---
+# 5. UI Form
 with st.form("chat_form", clear_on_submit=False):
+    # Input Email (Tetap ada di session state saat form disubmit atau dihapus)
     user_email = st.text_input(
-        "Email Gmail Wajib:", 
+        "Email Gmail Wajib (Format: nama@gmail.com):", 
         placeholder="contoh@gmail.com",
-        key="user_email_field",
-        value=st.session_state["saved_email"]
+        key="user_email"
     )
     
-    # Textarea menampilkan isi session state terakhir
     user_text = st.text_area(
         "Tanyakan sesuatu tentang Poltesa:",
-        placeholder="Ketik pertanyaan di sini...",
-        key="user_input_widget"
+        placeholder="Halo! Saya Sivita, ada yang bisa saya bantu?",
+        key="user_input" 
     )
     
     col1, col2 = st.columns([1, 1.5]) 
+    
     with col1:
         submitted = st.form_submit_button("Kirim", use_container_width=True)
     with col2:
-        manual_clear = st.form_submit_button("Pertanyaan Baru", use_container_width=True)
+        # Tombol ini sekarang hanya mengosongkan teks pertanyaan
+        st.form_submit_button("Hapus Chat", on_click=clear_text, use_container_width=True)
+    
+    if submitted:
+        if not user_email:
+            st.error("Alamat email wajib diisi!")
+        elif not is_valid_email(user_email):
+            st.error("Format email salah! Harus menggunakan @gmail.com")
+        elif user_text.strip() == "":
+            st.warning("Mohon masukkan pertanyaan terlebih dahulu.")
+        else:
+            with st.spinner("Mencari data resmi..."):
+                generate_response(user_email, user_text)
 
-# --- LOGIKA TOMBOL PERTANYAAN BARU (KOSONGKAN TEXTAREA SAJA) ---
-if manual_clear:
-    st.session_state["user_input_widget"] = ""
-    st.rerun()
-
-# --- LOGIKA PROSES KIRIM ---
-if submitted:
-    if not user_email or not is_valid_email(user_email):
-        st.error("Format email harus nama@gmail.com")
-    elif user_text.strip() == "":
-        st.warning("Masukkan pertanyaan.")
-    else:
-        st.session_state["saved_email"] = user_email
-        with st.spinner("Sivita sedang berpikir..."):
-            jawaban = generate_response(user_email, user_text)
-            if jawaban:
-                st.session_state["last_answer"] = jawaban
-                st.session_state["last_question"] = user_text
-                save_to_log(user_email, user_text, jawaban)
-                # Teks TIDAK dihapus di sini agar tetap ada setelah klik Kirim
-                st.rerun()
-
-# --- TAMPILAN JAWABAN ---
-if st.session_state["last_answer"]:
-    st.write("---")
-    st.markdown(f"**Pertanyaan Terakhir:** *{st.session_state['last_question']}*")
-    st.chat_message("assistant").markdown(st.session_state["last_answer"])
-
+# Footer
 st.markdown("---")
 st.caption("Sivita - Sistem Informasi Virtual Asisten Poltesa")
