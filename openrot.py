@@ -15,10 +15,10 @@ st.set_page_config(page_title="Asisten POLTESA", page_icon="🎓")
 # --- INISIALISASI SESSION STATE ---
 if "last_answer" not in st.session_state:
     st.session_state["last_answer"] = ""
+if "last_question" not in st.session_state:
+    st.session_state["last_question"] = ""
 if "saved_email" not in st.session_state:
     st.session_state["saved_email"] = ""
-if "should_clear" not in st.session_state:
-    st.session_state["should_clear"] = False
 
 # --- FUNGSI VALIDASI EMAIL ---
 def is_valid_email(email):
@@ -35,12 +35,6 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 st.title("🎓 Asisten Virtual Poltesa (Sivita)")
-
-# --- LOGIKA PEMBERSIHAN OTOMATIS ---
-# Jika flag clear aktif, kita kosongkan session state widget sebelum form digambar
-if st.session_state["should_clear"]:
-    st.session_state["user_input_widget"] = ""
-    st.session_state["should_clear"] = False
 
 # --- FUNGSI: SIMPAN LOG ---
 def save_to_log(email, question, answer=""):
@@ -84,9 +78,7 @@ def generate_response(user_email, user_input):
         
         final_prompt = f"{instruction}\n\nDATA: {additional_data}\n\nPERTANYAAN: {user_input}\n\nJAWABAN:"
         response = model.invoke(final_prompt)
-        
-        if response and response.content:
-            return response.content
+        return response.content if response else None
     except Exception as e:
         st.error(f"Terjadi kesalahan teknis: {e}")
         return None
@@ -100,6 +92,7 @@ with st.form("chat_form", clear_on_submit=False):
         value=st.session_state["saved_email"]
     )
     
+    # Textarea menampilkan isi session state terakhir
     user_text = st.text_area(
         "Tanyakan sesuatu tentang Poltesa:",
         placeholder="Ketik pertanyaan di sini...",
@@ -110,9 +103,14 @@ with st.form("chat_form", clear_on_submit=False):
     with col1:
         submitted = st.form_submit_button("Kirim", use_container_width=True)
     with col2:
-        manual_clear = st.form_submit_button("Hapus Chat", use_container_width=True)
+        manual_clear = st.form_submit_button("Pertanyaan Baru", use_container_width=True)
 
-# --- LOGIKA PROSES ---
+# --- LOGIKA TOMBOL PERTANYAAN BARU (KOSONGKAN TEXTAREA SAJA) ---
+if manual_clear:
+    st.session_state["user_input_widget"] = ""
+    st.rerun()
+
+# --- LOGIKA PROSES KIRIM ---
 if submitted:
     if not user_email or not is_valid_email(user_email):
         st.error("Format email harus nama@gmail.com")
@@ -124,23 +122,16 @@ if submitted:
             jawaban = generate_response(user_email, user_text)
             if jawaban:
                 st.session_state["last_answer"] = jawaban
-                st.session_state["should_clear"] = True
+                st.session_state["last_question"] = user_text
                 save_to_log(user_email, user_text, jawaban)
-                st.rerun() # Refresh untuk membersihkan textarea & menampilkan jawaban baru
-
-if manual_clear:
-    st.session_state["last_answer"] = ""
-    st.session_state["user_input_widget"] = ""
-    st.session_state["should_clear"] = False
-    st.rerun()
+                # Teks TIDAK dihapus di sini agar tetap ada setelah klik Kirim
+                st.rerun()
 
 # --- TAMPILAN JAWABAN ---
-# Ditempatkan di luar form agar tetap muncul setelah rerun
 if st.session_state["last_answer"]:
     st.write("---")
-    st.markdown("### Jawaban Sivita:")
+    st.markdown(f"**Pertanyaan Terakhir:** *{st.session_state['last_question']}*")
     st.chat_message("assistant").markdown(st.session_state["last_answer"])
 
 st.markdown("---")
 st.caption("Sivita - Sistem Informasi Virtual Asisten Poltesa")
-
