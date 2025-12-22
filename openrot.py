@@ -1,6 +1,7 @@
 import streamlit as st
 import os
 import pandas as pd
+import requests  # Library tambahan untuk mengirim log
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 
@@ -11,25 +12,27 @@ api_key = os.getenv("OPENROUTER_API_KEY")
 # 2. Konfigurasi Halaman
 st.set_page_config(page_title="Asisten POLTESA", page_icon="🎓")
 
-# --- CSS Kustom untuk Merapikan Tampilan Mobile ---
+# --- CSS Kustom ---
 st.markdown("""
     <style>
-    .stTextArea textarea {
-        border-radius: 10px;
-    }
-    .stButton button {
-        border-radius: 20px;
-    }
-    /* Memastikan link panjang tidak merusak layout */
-    a {
-        word-wrap: break-word;
-        text-decoration: none;
-        color: #007bff;
-    }
+    .stTextArea textarea { border-radius: 10px; }
+    .stButton button { border-radius: 20px; }
+    a { word-wrap: break-word; text-decoration: none; color: #007bff; }
     </style>
     """, unsafe_allow_html=True)
 
 st.title("🎓 Asisten Virtual Poltesa (Sivita)")
+
+# --- FUNGSI BARU: SIMPAN LOG KE GOOGLE SHEETS ---
+def save_to_log(question):
+    """Mengirim pertanyaan user ke Google Apps Script untuk dicatat di sheet 'log'"""
+    try:
+        log_url = st.secrets["LOG_URL"]
+        # Mengirim data pertanyaan dalam format JSON
+        requests.post(log_url, json={"question": question}, timeout=5)
+    except Exception as e:
+        # Kita gunakan print agar error log tidak mengganggu tampilan user di UI
+        print(f"Log Error: {e}")
 
 # --- FUNGSI: AMBIL DATA GOOGLE SHEETS ---
 def get_sheet_data():
@@ -37,27 +40,17 @@ def get_sheet_data():
     try:     
         central_url = st.secrets["SHEET_CENTRAL_URL"]
         df_list = pd.read_csv(central_url)
-        
-        # Ambil daftar nama tab dari kolom 'NamaTab'
         tab_names = df_list['NamaTab'].tolist()
-        
-        # 2. Ambil Data
-        # Kita ambil bagian ID-nya saja agar bisa ganti-ganti gid secara otomatis
         base_url = central_url.split('/export')[0]
         
         for tab in tab_names:
-            # Gunakan parameter 'sheet' untuk memanggil nama tab secara spesifik
-            # Catatan: pandas bisa membaca sheet langsung jika menggunakan format /pub?output=xlsx
-            # Tapi untuk CSV, kita gunakan format export dengan parameter sheet name
             tab_url = f"{base_url}/gviz/tq?tqx=out:csv&sheet={tab.replace(' ', '%20')}"
-            
             try:
                 df = pd.read_csv(tab_url)
                 all_combined_data += f"\n\n### DATA {tab.upper()} ###\n"
                 all_combined_data += df.to_string(index=False)
             except:
-                continue # Jika satu tab gagal, lanjut ke tab berikutnya
-                
+                continue 
         return all_combined_data
     except Exception as e:
         return ""
@@ -72,8 +65,7 @@ def load_system_prompt(file_path):
         if os.path.exists(file_path):
             with open(file_path, "r", encoding="utf-8") as f:
                 return f.read()
-        else:
-            return ""
+        return ""
     except Exception as e:
         st.error(f"Gagal membaca file prompt: {e}")
         return ""
@@ -83,14 +75,13 @@ def generate_response(user_input):
     try:
         api_key_secret = st.secrets["OPENROUTER_API_KEY"]
         instruction = st.secrets["SYSTEM_PROMPT"]
-        # Mengambil data dari Google Sheets
         additional_data = get_sheet_data()
     except KeyError:
         st.error("Konfigurasi Secrets tidak ditemukan!")
         return
 
     model = ChatOpenAI(
-        model="google/gemini-2.5-flash-lite", 
+        model="google/gemini-2.0-flash-lite-preview-02-05", # Versi terbaru/stabil di OpenRouter
         openai_api_key=api_key_secret,
         openai_api_base="https://openrouter.ai/api/v1",
         temperature=0.0,
@@ -100,7 +91,6 @@ def generate_response(user_input):
         }
     )
     
-    # Menambahkan instruksi pemformatan agar link menjadi rapi (Markdown)
     final_prompt = f"""
     {instruction}
 
@@ -120,7 +110,6 @@ def generate_response(user_input):
     
     try:
         response = model.invoke(final_prompt)
-        
         if response and response.content:
             st.chat_message("assistant").markdown(response.content)
         else:
@@ -128,9 +117,7 @@ def generate_response(user_input):
             
     except Exception as e:
         error_msg = str(e)
-        if "429" in error_msg:
-            st.error("Mohon Maaf Kami sedang mengalami Gangguan Teknis. \n\n Web : https://poltesa.ac.id/")
-        elif "402" in error_msg:
+        if any(code in error_msg for code in ["429", "402"]):
             st.error("Mohon Maaf Kami sedang mengalami Gangguan Teknis. \n\n Web : https://poltesa.ac.id/")
         else:
             st.error(f"Terjadi kesalahan teknis: {e}")
@@ -154,22 +141,13 @@ with st.form("chat_form", clear_on_submit=False):
         if user_text.strip() == "":
             st.warning("Mohon masukkan pertanyaan terlebih dahulu.")
         else:
+            # --- PROSES SIMPAN LOG DIMULAI ---
+            save_to_log(user_text)
+            # --- PROSES SIMPAN LOG SELESAI ---
+            
             with st.spinner("Mencari data resmi..."):
                 generate_response(user_text)
 
 # Footer
 st.markdown("---")
 st.caption("Sumber data: poltesa.ac.id & Database Internal Poltesa | Powered by OpenRouter")
-
-
-
-
-
-
-
-
-
-
-
-
-
