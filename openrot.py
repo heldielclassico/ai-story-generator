@@ -1,13 +1,12 @@
 import streamlit as st
 import os
 import pandas as pd
-import requests  # Library tambahan untuk mengirim log
+import requests
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 
 # 1. Load Environment Variables
 load_dotenv()
-api_key = os.getenv("OPENROUTER_API_KEY")
 
 # 2. Konfigurasi Halaman
 st.set_page_config(page_title="Asisten POLTESA", page_icon="🎓")
@@ -16,6 +15,7 @@ st.set_page_config(page_title="Asisten POLTESA", page_icon="🎓")
 st.markdown("""
     <style>
     .stTextArea textarea { border-radius: 10px; }
+    .stTextInput input { border-radius: 10px; }
     .stButton button { border-radius: 20px; }
     a { word-wrap: break-word; text-decoration: none; color: #007bff; }
     </style>
@@ -23,15 +23,16 @@ st.markdown("""
 
 st.title("🎓 Asisten Virtual Poltesa (Sivita)")
 
-# --- FUNGSI BARU: SIMPAN LOG KE GOOGLE SHEETS ---
-def save_to_log(question):
-    """Mengirim pertanyaan user ke Google Apps Script untuk dicatat di sheet 'log'"""
+# --- FUNGSI: SIMPAN LOG KE GOOGLE SHEETS (DENGAN EMAIL) ---
+def save_to_log(email, question):
     try:
         log_url = st.secrets["LOG_URL"]
-        # Mengirim data pertanyaan dalam format JSON
-        requests.post(log_url, json={"question": question}, timeout=5)
+        payload = {
+            "email": email if email else "Anonim",
+            "question": question
+        }
+        requests.post(log_url, json=payload, timeout=5)
     except Exception as e:
-        # Kita gunakan print agar error log tidak mengganggu tampilan user di UI
         print(f"Log Error: {e}")
 
 # --- FUNGSI: AMBIL DATA GOOGLE SHEETS ---
@@ -55,20 +56,9 @@ def get_sheet_data():
     except Exception as e:
         return ""
 
-# --- FUNGSI: CLEAR INPUT ---
 def clear_text():
     st.session_state["user_input"] = ""
-
-# 3. Fungsi Load Prompt
-def load_system_prompt(file_path):
-    try:
-        if os.path.exists(file_path):
-            with open(file_path, "r", encoding="utf-8") as f:
-                return f.read()
-        return ""
-    except Exception as e:
-        st.error(f"Gagal membaca file prompt: {e}")
-        return ""
+    st.session_state["user_email"] = ""
 
 # --- 4. Fungsi Generate Response ---
 def generate_response(user_input):
@@ -81,7 +71,7 @@ def generate_response(user_input):
         return
 
     model = ChatOpenAI(
-        model="google/gemini-2.5-flash-lite", # Versi terbaru/stabil di OpenRouter
+        model="google/gemini-2.0-flash-lite-preview-02-05",
         openai_api_key=api_key_secret,
         openai_api_base="https://openrouter.ai/api/v1",
         temperature=0.0,
@@ -91,42 +81,27 @@ def generate_response(user_input):
         }
     )
     
-    final_prompt = f"""
-    {instruction}
-
-    ### DATA TAMBAHAN DARI GOOGLE SHEETS ###
-    {additional_data}
-
-    ATURAN TAMBAHAN PEMFORMATAN:
-    - Gunakan format [Nama Link](URL) untuk semua tautan agar rapi.
-    - Jangan tampilkan URL mentah yang panjang.
-    - Gunakan bullet points untuk daftar.
-
-    PERTANYAAN PENGGUNA: 
-    {user_input}
-
-    JAWABAN:
-    """
+    final_prompt = f"{instruction}\n\n### DATA GOOGLE SHEETS ###\n{additional_data}\n\nPERTANYAAN: {user_input}\n\nJAWABAN:"
     
     try:
         response = model.invoke(final_prompt)
         if response and response.content:
             st.chat_message("assistant").markdown(response.content)
-        else:
-            st.warning("AI tidak dapat merumuskan jawaban.")
-            
     except Exception as e:
-        error_msg = str(e)
-        if any(code in error_msg for code in ["429", "402"]):
-            st.error("Mohon Maaf Kami sedang mengalami Gangguan Teknis. \n\n Web : https://poltesa.ac.id/")
-        else:
-            st.error(f"Terjadi kesalahan teknis: {e}")
+        st.error(f"Terjadi kesalahan teknis: {e}")
 
 # 5. UI Form
 with st.form("chat_form", clear_on_submit=False):
+    # Input Email Baru
+    user_email = st.text_input(
+        "Email (Opsional):", 
+        placeholder="nama@email.com",
+        key="user_email"
+    )
+    
     user_text = st.text_area(
         "Tanyakan sesuatu tentang Poltesa:",
-        placeholder="Halo Sobat Poltesa! Saya Sivita, ada yang bisa saya bantu hari ini?",
+        placeholder="Halo! Saya Sivita, ada yang bisa saya bantu?",
         key="user_input" 
     )
     
@@ -141,14 +116,12 @@ with st.form("chat_form", clear_on_submit=False):
         if user_text.strip() == "":
             st.warning("Mohon masukkan pertanyaan terlebih dahulu.")
         else:
-            # --- PROSES SIMPAN LOG DIMULAI ---
-            save_to_log(user_text)
-            # --- PROSES SIMPAN LOG SELESAI ---
+            # Simpan email dan pertanyaan ke log
+            save_to_log(user_email, user_text)
             
             with st.spinner("Mencari data resmi..."):
                 generate_response(user_text)
 
 # Footer
 st.markdown("---")
-st.caption("Sumber data: poltesa.ac.id & Database Internal Poltesa | Powered by OpenRouter")
-
+st.caption("Sumber data: poltesa.ac.id | Powered by OpenRouter")
