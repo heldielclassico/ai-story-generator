@@ -2,7 +2,7 @@ import streamlit as st
 import os
 import pandas as pd
 import requests
-import re
+import re  # Library untuk validasi format email
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 
@@ -20,7 +20,6 @@ if "should_clear" not in st.session_state:
 
 # --- FUNGSI VALIDASI EMAIL ---
 def is_valid_email(email):
-    # Regex untuk memastikan format nama@gmail.com
     pattern = r'^[a-zA-Z0-9._%+-]+@gmail\.com$'
     return re.match(pattern, email) is not None
 
@@ -35,9 +34,7 @@ st.markdown("""
 
 st.title("🎓 Asisten Virtual Poltesa (Sivita)")
 
-# --- LOGIKA OTOMATIS HAPUS SAAT FOKUS KEMBALI ---
-# Jika sistem mendeteksi pertanyaan sebelumnya sudah dijawab (should_clear=True)
-# dan user melakukan interaksi (rerun), maka textarea dikosongkan.
+# --- LOGIKA OTOMATIS HAPUS SAAT AKAN MENGETIK BARU ---
 if st.session_state["should_clear"]:
     if "user_input" in st.session_state:
         st.session_state["user_input"] = ""
@@ -76,11 +73,11 @@ def get_sheet_data():
     except:
         return ""
 
-# --- FUNGSI: HAPUS CHAT MANUAL ---
-def clear_text():
+# --- FUNGSI: HAPUS INPUT SAJA (Jawabannya Jangan) ---
+def clear_input_only():
+    # Menghapus isi kolom pertanyaan saja di session state
     st.session_state["user_input"] = ""
-    st.session_state["last_answer"] = ""
-    st.session_state["should_clear"] = False
+    # st.session_state["last_answer"] TIDAK dihapus di sini agar tetap tampil
 
 # --- 4. Fungsi Generate Response ---
 def generate_response(user_email, user_input):
@@ -100,12 +97,10 @@ def generate_response(user_email, user_input):
         response = model.invoke(final_prompt)
         
         if response and response.content:
+            # Simpan jawaban ke session state agar tetap tampil saat input dihapus
             st.session_state["last_answer"] = response.content
-            # Tampilkan jawaban
-            st.chat_message("assistant").markdown(response.content)
-            # Simpan log
             save_to_log(user_email, user_input, response.content)
-            # Tandai agar input dihapus pada interaksi berikutnya
+            # Tandai agar input dibersihkan saat interaksi berikutnya (auto-clear)
             st.session_state["should_clear"] = True
     except Exception as e:
         st.error(f"Terjadi kesalahan teknis: {e}")
@@ -129,7 +124,8 @@ with st.form("chat_form", clear_on_submit=False):
     with col1:
         submitted = st.form_submit_button("Kirim", use_container_width=True)
     with col2:
-        st.form_submit_button("Hapus Chat", on_click=clear_text, use_container_width=True)
+        # Tombol ini memicu fungsi yang hanya menghapus isi kotak pertanyaan
+        st.form_submit_button("Hapus Chat", on_click=clear_input_only, use_container_width=True)
     
     if submitted:
         if not user_email:
@@ -141,6 +137,11 @@ with st.form("chat_form", clear_on_submit=False):
         else:
             with st.spinner("Mencari data resmi..."):
                 generate_response(user_email, user_text)
+
+# --- TAMPILAN JAWABAN (Di luar form agar tidak terpengaruh reset input) ---
+if st.session_state["last_answer"]:
+    st.write("---")
+    st.chat_message("assistant").markdown(st.session_state["last_answer"])
 
 # Footer
 st.markdown("---")
