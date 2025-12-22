@@ -2,7 +2,7 @@ import streamlit as st
 import os
 import pandas as pd
 import requests
-import re  # Library untuk validasi format email
+import re
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 
@@ -40,20 +40,16 @@ if st.session_state["should_clear"]:
         st.session_state["user_input"] = ""
     st.session_state["should_clear"] = False
 
-# --- FUNGSI: SIMPAN LOG KE GOOGLE SHEETS ---
+# --- FUNGSI: SIMPAN LOG ---
 def save_to_log(email, question, answer=""):
     try:
         log_url = st.secrets["LOG_URL"]
-        payload = {
-            "email": email,
-            "question": question,
-            "answer": answer
-        }
+        payload = {"email": email, "question": question, "answer": answer}
         requests.post(log_url, json=payload, timeout=5)
     except Exception as e:
         print(f"Log Error: {e}")
 
-# --- FUNGSI: AMBIL DATA GOOGLE SHEETS ---
+# --- FUNGSI: AMBIL DATA ---
 def get_sheet_data():
     all_combined_data = ""
     try:     
@@ -61,25 +57,20 @@ def get_sheet_data():
         df_list = pd.read_csv(central_url)
         tab_names = df_list['NamaTab'].tolist()
         base_url = central_url.split('/export')[0]
-        
         for tab in tab_names:
             tab_url = f"{base_url}/gviz/tq?tqx=out:csv&sheet={tab.replace(' ', '%20')}"
             try:
                 df = pd.read_csv(tab_url)
                 all_combined_data += f"\n\n### DATA {tab.upper()} ###\n{df.to_string(index=False)}"
-            except:
-                continue 
+            except: continue 
         return all_combined_data
-    except:
-        return ""
+    except: return ""
 
-# --- FUNGSI: HAPUS INPUT SAJA (Jawabannya Jangan) ---
+# --- FUNGSI: HAPUS INPUT SAJA ---
 def clear_input_only():
-    # Menghapus isi kolom pertanyaan saja di session state
     st.session_state["user_input"] = ""
-    # st.session_state["last_answer"] TIDAK dihapus di sini agar tetap tampil
 
-# --- 4. Fungsi Generate Response ---
+# --- FUNGSI: GENERATE RESPONSE ---
 def generate_response(user_email, user_input):
     try:
         api_key_secret = st.secrets["OPENROUTER_API_KEY"]
@@ -97,15 +88,18 @@ def generate_response(user_email, user_input):
         response = model.invoke(final_prompt)
         
         if response and response.content:
-            # Simpan jawaban ke session state agar tetap tampil saat input dihapus
             st.session_state["last_answer"] = response.content
             save_to_log(user_email, user_input, response.content)
-            # Tandai agar input dibersihkan saat interaksi berikutnya (auto-clear)
             st.session_state["should_clear"] = True
     except Exception as e:
         st.error(f"Terjadi kesalahan teknis: {e}")
 
-# 5. UI Form
+# --- [POSISI BARU] TAMPILAN JAWABAN (Di atas Form) ---
+if st.session_state["last_answer"]:
+    st.chat_message("assistant").markdown(st.session_state["last_answer"])
+    st.write("---") # Garis pemisah antara jawaban dan input baru
+
+# --- UI FORM ---
 with st.form("chat_form", clear_on_submit=False):
     user_email = st.text_input(
         "Email Gmail Wajib (Format: nama@gmail.com):", 
@@ -124,24 +118,17 @@ with st.form("chat_form", clear_on_submit=False):
     with col1:
         submitted = st.form_submit_button("Kirim", use_container_width=True)
     with col2:
-        # Tombol ini memicu fungsi yang hanya menghapus isi kotak pertanyaan
         st.form_submit_button("Hapus Chat", on_click=clear_input_only, use_container_width=True)
     
     if submitted:
-        if not user_email:
-            st.error("Alamat email wajib diisi!")
-        elif not is_valid_email(user_email):
-            st.error("Format email salah! Harus menggunakan @gmail.com")
+        if not user_email or not is_valid_email(user_email):
+            st.error("Email wajib diisi dengan format @gmail.com")
         elif user_text.strip() == "":
             st.warning("Mohon masukkan pertanyaan terlebih dahulu.")
         else:
             with st.spinner("Mencari data resmi..."):
                 generate_response(user_email, user_text)
-
-# --- TAMPILAN JAWABAN (Di luar form agar tidak terpengaruh reset input) ---
-if st.session_state["last_answer"]:
-    st.write("---")
-    st.chat_message("assistant").markdown(st.session_state["last_answer"])
+                st.rerun() # Refresh agar jawaban langsung muncul di atas
 
 # Footer
 st.markdown("---")
