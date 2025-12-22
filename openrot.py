@@ -131,4 +131,5 @@ with st.form("chat_form", clear_on_submit=False):
                 generate_response(user_email, user_text)
 
 # Footer (Tanpa garis pemisah dan jarak dirapatkan via CSS)
-st.caption("Sivita - Sistem Informasi Virtual Asisten Poltesa")
+st.caption("Sivita - Sistem Informasi Virtual Asisten Poltesa @2025")
+
