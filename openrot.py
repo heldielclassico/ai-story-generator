@@ -29,7 +29,7 @@ st.markdown("""
 
 st.title("🎓 Asisten Virtual Poltesa (Sivita)")
 
-# --- FUNGSI: SIMPAN LOG ---
+# --- FUNGSI: SIMPAN LOG KE GOOGLE SHEETS ---
 def save_to_log(email, question, answer=""):
     try:
         log_url = st.secrets["LOG_URL"]
@@ -62,9 +62,11 @@ def get_sheet_data():
     except:
         return ""
 
+# --- FUNGSI: HAPUS CHAT (Hanya Pertanyaan) ---
 def clear_text():
+    # Menghapus isi kolom pertanyaan saja
     st.session_state["user_input"] = ""
-    st.session_state["user_email"] = ""
+    # Email tetap dipertahankan, tidak dihapus dari session_state
 
 # --- 4. Fungsi Generate Response ---
 def generate_response(user_email, user_input):
@@ -85,16 +87,16 @@ def generate_response(user_email, user_input):
         
         if response and response.content:
             st.chat_message("assistant").markdown(response.content)
-            # Simpan ke log setelah jawaban muncul
+            # Simpan log pertanyaan dan jawaban AI
             save_to_log(user_email, user_input, response.content)
     except Exception as e:
         st.error(f"Terjadi kesalahan teknis: {e}")
 
 # 5. UI Form
 with st.form("chat_form", clear_on_submit=False):
-    # Input Email Wajib
+    # Input Email (Tetap ada di session state saat form disubmit atau dihapus)
     user_email = st.text_input(
-        "Email Wajib di isi (Format: nama@gmail.com):", 
+        "Email Gmail Wajib (Format: nama@gmail.com):", 
         placeholder="contoh@gmail.com",
         key="user_email"
     )
@@ -110,9 +112,9 @@ with st.form("chat_form", clear_on_submit=False):
     with col1:
         submitted = st.form_submit_button("Kirim", use_container_width=True)
     with col2:
+        # Tombol ini sekarang hanya mengosongkan teks pertanyaan
         st.form_submit_button("Hapus Chat", on_click=clear_text, use_container_width=True)
     
-    # Logika Validasi saat tombol ditekan
     if submitted:
         if not user_email:
             st.error("Alamat email wajib diisi!")
@@ -127,5 +129,3 @@ with st.form("chat_form", clear_on_submit=False):
 # Footer
 st.markdown("---")
 st.caption("Sivita - Sistem Informasi Virtual Asisten Poltesa")
-
-
