@@ -25,17 +25,13 @@ st.markdown("""
     .stTextInput input { border-radius: 10px; }
     .stButton button { border-radius: 20px; }
     
-    /* Mengurangi jarak antara form dan elemen di bawahnya */
-    .stForm { margin-bottom: 0px; }
+    /* Menghilangkan margin bawah form agar caption bisa lebih dekat */
+    .stForm { margin-bottom: 0px !important; }
     
-    /* Mengatur jarak footer agar lebih rapat */
-    .custom-footer {
-        margin-top: -20px;
-        text-align: left;
-    }
-    hr {
-        margin-top: 5px;
-        margin-bottom: 5px;
+    /* Mengatur jarak caption agar mepet dengan tombol */
+    .stCaption {
+        margin-top: -15px !important;
+        padding-top: 0px !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -116,7 +112,6 @@ with st.form("chat_form", clear_on_submit=False):
         key="user_input" 
     )
     
-    # Menggunakan kolom yang seimbang agar tombol terlihat rapi
     col1, col2 = st.columns([1, 1]) 
     
     with col1:
@@ -135,6 +130,5 @@ with st.form("chat_form", clear_on_submit=False):
             with st.spinner("Mencari data resmi..."):
                 generate_response(user_email, user_text)
 
-# Footer (Dikemas dalam div kustom untuk merapatkan posisi)
-st.markdown('<div class="custom-footer"><hr></div>', unsafe_allow_html=True)
+# Footer (Tanpa garis pemisah dan jarak dirapatkan via CSS)
 st.caption("Sivita - Sistem Informasi Virtual Asisten Poltesa")
