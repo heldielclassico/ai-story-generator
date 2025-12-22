@@ -12,25 +12,18 @@ load_dotenv()
 # 2. Konfigurasi Halaman
 st.set_page_config(page_title="Asisten POLTESA", page_icon="🎓")
 
-# Inisialisasi State untuk menyimpan jawaban agar tidak hilang saat input dihapus
+# Inisialisasi State
 if "last_answer" not in st.session_state:
     st.session_state["last_answer"] = ""
+if "should_clear" not in st.session_state:
+    st.session_state["should_clear"] = False
+if "saved_email" not in st.session_state:
+    st.session_state["saved_email"] = ""
 
 # --- FUNGSI VALIDASI EMAIL ---
 def is_valid_email(email):
     pattern = r'^[a-zA-Z0-9._%+-]+@gmail\.com$'
     return re.match(pattern, email) is not None
-
-# --- CSS Kustom ---
-st.markdown("""
-    <style>
-    .stTextArea textarea { border-radius: 10px; }
-    .stTextInput input { border-radius: 10px; }
-    .stButton button { border-radius: 20px; }
-    </style>
-    """, unsafe_allow_html=True)
-
-st.title("🎓 Asisten Virtual Poltesa (Sivita)")
 
 # --- FUNGSI: SIMPAN LOG ---
 def save_to_log(email, question, answer=""):
@@ -58,12 +51,7 @@ def get_sheet_data():
         return all_data
     except: return ""
 
-# --- FUNGSI: HAPUS INPUT SAJA ---
-def clear_question_only():
-    # Menghapus teks di textarea tanpa menghapus jawaban yang tampil
-    st.session_state["user_input"] = ""
-
-# --- 4. Fungsi Generate Response ---
+# --- FUNGSI: GENERATE RESPONSE ---
 def generate_response(user_email, user_input):
     try:
         api_key_secret = st.secrets["OPENROUTER_API_KEY"]
@@ -81,7 +69,6 @@ def generate_response(user_email, user_input):
         response = model.invoke(final_prompt)
         
         if response and response.content:
-            # Simpan jawaban ke session state agar tetap tampil walau form direset
             st.session_state["last_answer"] = response.content
             save_to_log(user_email, user_input, response.content)
             return response.content
@@ -89,27 +76,32 @@ def generate_response(user_email, user_input):
         st.error(f"Terjadi kesalahan teknis: {e}")
         return None
 
-# 5. UI Form
+# --- LOGIKA AUTO-CLEAR SAAT JAWABAN SUDAH ADA ---
+def on_text_change():
+    # Jika user mulai mengetik dan sebelumnya sudah ada jawaban, kosongkan textarea
+    if st.session_state["should_clear"]:
+        st.session_state["user_input_widget"] = ""
+        st.session_state["should_clear"] = False
+
+st.title("🎓 Asisten Virtual Poltesa (Sivita)")
+
+# --- UI FORM ---
 with st.form("chat_form", clear_on_submit=False):
     user_email = st.text_input(
         "Email Gmail Wajib:", 
         placeholder="contoh@gmail.com",
-        key="user_email"
+        value=st.session_state["saved_email"]
     )
     
-    # Textarea
+    # Textarea dengan callback on_change
     user_text = st.text_area(
         "Tanyakan sesuatu tentang Poltesa:",
-        placeholder="Ketik di sini...",
-        key="user_input"
+        placeholder="Ketik pertanyaan di sini...",
+        key="user_input_widget",
+        on_change=on_text_change
     )
     
-    col1, col2 = st.columns([1, 1.5]) 
-    with col1:
-        submitted = st.form_submit_button("Kirim", use_container_width=True)
-    with col2:
-        # Tombol hapus chat hanya menghapus isi kotak pertanyaan
-        st.form_submit_button("Hapus Chat", on_click=clear_question_only, use_container_width=True)
+    submitted = st.form_submit_button("Kirim", use_container_width=True)
 
 # Logika Eksekusi
 if submitted:
@@ -118,15 +110,17 @@ if submitted:
     elif user_text.strip() == "":
         st.warning("Masukkan pertanyaan.")
     else:
+        st.session_state["saved_email"] = user_email
         with st.spinner("Mencari data resmi..."):
-            ans = generate_response(user_email, user_text)
+            generate_response(user_email, user_text)
+            # Tandai bahwa setelah ini, jika user klik textarea lagi, teks harus hilang
+            st.session_state["should_clear"] = True
+            st.rerun()
 
-# --- AREA TAMPILAN JAWABAN (Di luar Form agar tidak terpengaruh reset) ---
+# --- AREA TAMPILAN JAWABAN ---
 if st.session_state["last_answer"]:
-    st.markdown("### Jawaban Sivita:")
+    st.write("---")
     st.chat_message("assistant").markdown(st.session_state["last_answer"])
 
-# Footer
 st.markdown("---")
 st.caption("Sivita - Sistem Informasi Virtual Asisten Poltesa")
-
