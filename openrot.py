@@ -76,7 +76,7 @@ def generate_response(user_email, user_input):
         additional_data = get_sheet_data()
         
         model = ChatOpenAI(
-            model="google/gemini-2.0-flash-lite",
+            model="google/gemini-2.5-flash-lite",
             openai_api_key=api_key_secret,
             openai_api_base="https://openrouter.ai/api/v1",
             temperature=0.0
@@ -143,3 +143,4 @@ if st.session_state["last_answer"]:
 
 st.markdown("---")
 st.caption("Sivita - Sistem Informasi Virtual Asisten Poltesa")
+
