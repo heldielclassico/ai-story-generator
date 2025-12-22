@@ -15,10 +15,10 @@ st.set_page_config(page_title="Asisten POLTESA", page_icon="🎓")
 # --- INISIALISASI SESSION STATE ---
 if "last_answer" not in st.session_state:
     st.session_state["last_answer"] = ""
-if "should_clear" not in st.session_state:
-    st.session_state["should_clear"] = False
 if "saved_email" not in st.session_state:
     st.session_state["saved_email"] = ""
+if "should_clear" not in st.session_state:
+    st.session_state["should_clear"] = False
 
 # --- FUNGSI VALIDASI EMAIL ---
 def is_valid_email(email):
@@ -35,6 +35,12 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 st.title("🎓 Asisten Virtual Poltesa (Sivita)")
+
+# --- LOGIKA PEMBERSIHAN OTOMATIS ---
+# Jika flag clear aktif, kita kosongkan session state widget sebelum form digambar
+if st.session_state["should_clear"]:
+    st.session_state["user_input_widget"] = ""
+    st.session_state["should_clear"] = False
 
 # --- FUNGSI: SIMPAN LOG ---
 def save_to_log(email, question, answer=""):
@@ -80,16 +86,10 @@ def generate_response(user_email, user_input):
         response = model.invoke(final_prompt)
         
         if response and response.content:
-            st.session_state["last_answer"] = response.content
-            save_to_log(user_email, user_input, response.content)
+            return response.content
     except Exception as e:
         st.error(f"Terjadi kesalahan teknis: {e}")
-
-# --- LOGIKA PEMBERSIHAN (Dijalankan sebelum form dirender) ---
-if st.session_state["should_clear"]:
-    # Jika flag should_clear aktif, kita kosongkan value di session state widget
-    st.session_state["user_input_widget"] = ""
-    st.session_state["should_clear"] = False
+        return None
 
 # --- UI FORM ---
 with st.form("chat_form", clear_on_submit=False):
@@ -100,7 +100,6 @@ with st.form("chat_form", clear_on_submit=False):
         value=st.session_state["saved_email"]
     )
     
-    # Menghapus 'on_change' dari sini untuk menghindari StreamlitInvalidFormCallbackError
     user_text = st.text_area(
         "Tanyakan sesuatu tentang Poltesa:",
         placeholder="Ketik pertanyaan di sini...",
@@ -108,15 +107,12 @@ with st.form("chat_form", clear_on_submit=False):
     )
     
     col1, col2 = st.columns([1, 1.5]) 
-    
     with col1:
         submitted = st.form_submit_button("Kirim", use_container_width=True)
     with col2:
-        # Untuk tombol hapus manual, kita tidak bisa pakai callback di dalam form. 
-        # Kita gunakan logika pengecekan tombol di bawah.
         manual_clear = st.form_submit_button("Hapus Chat", use_container_width=True)
 
-# --- LOGIKA SETELAH SUBMIT ---
+# --- LOGIKA PROSES ---
 if submitted:
     if not user_email or not is_valid_email(user_email):
         st.error("Format email harus nama@gmail.com")
@@ -124,20 +120,25 @@ if submitted:
         st.warning("Masukkan pertanyaan.")
     else:
         st.session_state["saved_email"] = user_email
-        with st.spinner("Mencari data resmi..."):
-            generate_response(user_email, user_text)
-            st.session_state["should_clear"] = True # Set agar saat rerun berikutnya textarea kosong
-            st.rerun()
+        with st.spinner("Sivita sedang berpikir..."):
+            jawaban = generate_response(user_email, user_text)
+            if jawaban:
+                st.session_state["last_answer"] = jawaban
+                st.session_state["should_clear"] = True
+                save_to_log(user_email, user_text, jawaban)
+                st.rerun() # Refresh untuk membersihkan textarea & menampilkan jawaban baru
 
 if manual_clear:
-    st.session_state["user_input_widget"] = ""
     st.session_state["last_answer"] = ""
+    st.session_state["user_input_widget"] = ""
     st.session_state["should_clear"] = False
     st.rerun()
 
-# --- AREA TAMPILAN JAWABAN ---
+# --- TAMPILAN JAWABAN ---
+# Ditempatkan di luar form agar tetap muncul setelah rerun
 if st.session_state["last_answer"]:
     st.write("---")
+    st.markdown("### Jawaban Sivita:")
     st.chat_message("assistant").markdown(st.session_state["last_answer"])
 
 st.markdown("---")
