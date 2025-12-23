@@ -93,7 +93,7 @@ def generate_response(user_email, user_input):
         additional_data = get_sheet_data()
         
         model = ChatOpenAI(
-            model="google/gemini-2.5-flash-lite-001",
+            model="google/gemini-2.5-flash",
             openai_api_key=api_key_secret,
             openai_api_base="https://openrouter.ai/api/v1",
             temperature=0.0
@@ -150,3 +150,4 @@ with st.form("chat_form", clear_on_submit=False):
 
 # Footer
 st.caption("Sivita - Sistem Informasi Virtual Asisten Poltesa @2025")
+
