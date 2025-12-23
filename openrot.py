@@ -3,7 +3,7 @@ import os
 import pandas as pd
 import requests
 import re
-import time  # Tambahkan library time
+import time  # Library untuk menghitung durasi
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 
@@ -15,6 +15,7 @@ st.set_page_config(page_title="Asisten POLTESA", page_icon="🎓")
 
 # --- FUNGSI VALIDASI EMAIL ---
 def is_valid_email(email):
+    # Regex untuk memastikan format nama@gmail.com
     pattern = r'^[a-zA-Z0-9._%+-]+@gmail\.com$'
     return re.match(pattern, email) is not None
 
@@ -24,14 +25,23 @@ st.markdown("""
     .stTextArea textarea { border-radius: 10px; }
     .stTextInput input { border-radius: 10px; }
     .stButton button { border-radius: 20px; }
+    
+    /* Menghilangkan margin bawah form agar caption bisa lebih dekat */
     .stForm { margin-bottom: 0px !important; }
-    .stCaption { margin-top: -15px !important; padding-top: 0px !important; }
-    /* Gaya untuk informasi durasi */
+    
+    /* Mengatur jarak caption agar mepet dengan tombol */
+    .stCaption {
+        margin-top: -15px !important;
+        padding-top: 0px !important;
+    }
+
+    /* Gaya untuk informasi durasi di bawah hasil */
     .duration-info {
-        font-size: 0.8rem;
-        color: #6c757d;
-        margin-top: -10px;
-        margin-bottom: 10px;
+        font-size: 0.75rem;
+        color: #9ea4a9;
+        margin-top: 2px;
+        margin-bottom: 15px;
+        font-style: italic;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -42,7 +52,11 @@ st.title("🎓 Asisten Virtual Poltesa (Sivita)")
 def save_to_log(email, question, answer=""):
     try:
         log_url = st.secrets["LOG_URL"]
-        payload = {"email": email, "question": question, "answer": answer}
+        payload = {
+            "email": email,
+            "question": question,
+            "answer": answer
+        }
         requests.post(log_url, json=payload, timeout=5)
     except Exception as e:
         print(f"Log Error: {e}")
@@ -67,20 +81,18 @@ def get_sheet_data():
     except:
         return ""
 
-# --- FUNGSI: HAPUS CHAT ---
+# --- FUNGSI: HAPUS CHAT (Hanya Pertanyaan) ---
 def clear_text():
     st.session_state["user_input"] = ""
 
-# --- 4. Fungsi Generate Response dengan Timer ---
+# --- 4. Fungsi Generate Response ---
 def generate_response(user_email, user_input):
-    # Mulai hitung waktu
+    # Mulai hitung waktu pencarian
     start_time = time.time()
     
     try:
         api_key_secret = st.secrets["OPENROUTER_API_KEY"]
         instruction = st.secrets["SYSTEM_PROMPT"]
-        
-        # Proses ambil data (bagian yang memakan waktu)
         additional_data = get_sheet_data()
         
         model = ChatOpenAI(
@@ -95,22 +107,25 @@ def generate_response(user_email, user_input):
         try:
             response = model.invoke(final_prompt)
             
-            # Hitung selisih waktu setelah jawaban didapat
+            # Hitung durasi setelah response diterima
             end_time = time.time()
             duration = round(end_time - start_time, 2)
             
             if response and response.content:
-                # Tampilkan info kecepatan
+                # Tampilkan jawaban asisten
+                st.chat_message("assistant").markdown(response.content)
+                
+                # Tampilkan durasi DI BAWAH jawaban
                 st.markdown(f'<p class="duration-info">⏱️ Pencarian selesai dalam {duration} detik</p>', unsafe_allow_html=True)
                 
-                st.chat_message("assistant").markdown(response.content)
                 save_to_log(user_email, user_input, response.content)
             else:
                 st.warning("AI tidak dapat merumuskan jawaban.")
                 
         except Exception as e:
             error_msg = str(e)
-            if any(code in error_msg for code in ["429", "402"]):
+            # Penanganan error kuota (429) atau saldo (402)
+            if "429" in error_msg or "402" in error_msg:
                 st.error("Mohon Maaf Kami sedang mengalami Gangguan Teknis. \n\n Web : https://poltesa.ac.id/")
             else:
                 st.error(f"Terjadi kesalahan teknis: {e}")
@@ -120,22 +135,35 @@ def generate_response(user_email, user_input):
 
 # 5. UI Form
 with st.form("chat_form", clear_on_submit=False):
-    user_email = st.text_input("Email Gmail Wajib:", placeholder="contoh@gmail.com", key="user_email")
-    user_text = st.text_area("Tanyakan sesuatu tentang Poltesa:", placeholder="Halo! Saya Sivita...", key="user_input")
+    user_email = st.text_input(
+        "Email Gmail Wajib (Format: nama@gmail.com):", 
+        placeholder="contoh@gmail.com",
+        key="user_email"
+    )
+    
+    user_text = st.text_area(
+        "Tanyakan sesuatu tentang Poltesa:",
+        placeholder="Halo! Saya Sivita, ada yang bisa saya bantu?",
+        key="user_input" 
+    )
     
     col1, col2 = st.columns([1, 1]) 
+    
     with col1:
         submitted = st.form_submit_button("Kirim", use_container_width=True)
     with col2:
         st.form_submit_button("Hapus Chat", on_click=clear_text, use_container_width=True)
     
     if submitted:
-        if not user_email or not is_valid_email(user_email):
-            st.error("Masukkan email @gmail.com yang valid!")
+        if not user_email:
+            st.error("Alamat email wajib diisi!")
+        elif not is_valid_email(user_email):
+            st.error("Format email salah! Harus menggunakan @gmail.com")
         elif user_text.strip() == "":
-            st.warning("Mohon masukkan pertanyaan.")
+            st.warning("Mohon masukkan pertanyaan terlebih dahulu.")
         else:
             with st.spinner("Mencari data resmi..."):
                 generate_response(user_email, user_text)
 
+# Footer
 st.caption("Sivita - Sistem Informasi Virtual Asisten Poltesa @2025")
