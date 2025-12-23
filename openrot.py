@@ -13,6 +13,13 @@ load_dotenv()
 # 2. Konfigurasi Halaman
 st.set_page_config(page_title="Asisten POLTESA", page_icon="🎓")
 
+# --- INISIALISASI SESSION STATE ---
+# Ini penting agar jawaban tidak hilang saat halaman refresh/rerun
+if "last_answer" not in st.session_state:
+    st.session_state["last_answer"] = ""
+if "last_duration" not in st.session_state:
+    st.session_state["last_duration"] = 0
+
 # --- FUNGSI VALIDASI EMAIL ---
 def is_valid_email(email):
     # Regex untuk memastikan format nama@gmail.com
@@ -84,6 +91,7 @@ def get_sheet_data():
 # --- FUNGSI: HAPUS CHAT (Hanya Pertanyaan) ---
 def clear_text():
     st.session_state["user_input"] = ""
+    # st.session_state["user_email"] = "" # Opsional: jika ingin email juga ikut terhapus
 
 # --- 4. Fungsi Generate Response ---
 def generate_response(user_email, user_input):
@@ -112,11 +120,9 @@ def generate_response(user_email, user_input):
             duration = round(end_time - start_time, 2)
             
             if response and response.content:
-                # Tampilkan jawaban asisten
-                st.chat_message("assistant").markdown(response.content)
-                
-                # Tampilkan durasi DI BAWAH jawaban
-                st.markdown(f'<p class="duration-info">⏱️ Pencarian selesai dalam {duration} detik</p>', unsafe_allow_html=True)
+                # SIMPAN KE SESSION STATE agar tidak hilang saat rerun
+                st.session_state["last_answer"] = response.content
+                st.session_state["last_duration"] = duration
                 
                 save_to_log(user_email, user_input, response.content)
             else:
@@ -124,7 +130,6 @@ def generate_response(user_email, user_input):
                 
         except Exception as e:
             error_msg = str(e)
-            # Penanganan error kuota (429) atau saldo (402)
             if "429" in error_msg or "402" in error_msg:
                 st.error("Mohon Maaf Kami sedang mengalami Gangguan Teknis. \n\n Web : https://poltesa.ac.id/")
             else:
@@ -152,6 +157,7 @@ with st.form("chat_form", clear_on_submit=False):
     with col1:
         submitted = st.form_submit_button("Kirim", use_container_width=True)
     with col2:
+        # Tombol ini memicu fungsi clear_text tapi tetap dalam siklus rerun Streamlit
         st.form_submit_button("Hapus Chat", on_click=clear_text, use_container_width=True)
     
     if submitted:
@@ -164,6 +170,13 @@ with st.form("chat_form", clear_on_submit=False):
         else:
             with st.spinner("Mencari data resmi..."):
                 generate_response(user_email, user_text)
+
+# --- BAGIAN MENAMPILKAN HASIL (DI LUAR FORM) ---
+# Bagian ini akan selalu dieksekusi setiap kali halaman rerun, 
+# sehingga jawaban terakhir akan tetap muncul meskipun input teks sudah dihapus.
+if st.session_state["last_answer"]:
+    st.chat_message("assistant").markdown(st.session_state["last_answer"])
+    st.markdown(f'<p class="duration-info">⏱️ Pencarian selesai dalam {st.session_state["last_duration"]} detik</p>', unsafe_allow_html=True)
 
 # Footer
 st.caption("Sivita - Sistem Informasi Virtual Asisten Poltesa @2025")
