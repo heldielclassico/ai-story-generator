@@ -75,7 +75,7 @@ def get_sheet_data():
 def clear_text():
     st.session_state["user_input"] = ""
 
-# --- 4. Fungsi Generate Response ---
+# --- 4. Fungsi Generate Response (DENGAN PENANGANAN ERROR BARU) ---
 def generate_response(user_email, user_input):
     try:
         api_key_secret = st.secrets["OPENROUTER_API_KEY"]
@@ -90,13 +90,28 @@ def generate_response(user_email, user_input):
         )
         
         final_prompt = f"{instruction}\n\nDATA: {additional_data}\n\nPERTANYAAN: {user_input}\n\nJAWABAN:"
-        response = model.invoke(final_prompt)
         
-        if response and response.content:
-            st.chat_message("assistant").markdown(response.content)
-            save_to_log(user_email, user_input, response.content)
+        # --- BLOK TRY-EXCEPT UNTUK MODEL INVOKE ---
+        try:
+            response = model.invoke(final_prompt)
+            
+            if response and response.content:
+                st.chat_message("assistant").markdown(response.content)
+                save_to_log(user_email, user_input, response.content)
+            else:
+                st.warning("AI tidak dapat merumuskan jawaban.")
+                
+        except Exception as e:
+            error_msg = str(e)
+            if "429" in error_msg:
+                st.error("Mohon Maaf Kami sedang mengalami Gangguan Teknis (Rate Limit). \n\n Web : https://poltesa.ac.id/")
+            elif "402" in error_msg:
+                st.error("Mohon Maaf Kami sedang mengalami Gangguan Teknis (Insufficient Credit). \n\n Web : https://poltesa.ac.id/")
+            else:
+                st.error(f"Terjadi kesalahan teknis: {e}")
+                
     except Exception as e:
-        st.error(f"Terjadi kesalahan teknis: {e}")
+        st.error(f"Gagal memuat konfigurasi: {e}")
 
 # 5. UI Form
 with st.form("chat_form", clear_on_submit=False):
@@ -130,5 +145,5 @@ with st.form("chat_form", clear_on_submit=False):
             with st.spinner("Mencari data resmi..."):
                 generate_response(user_email, user_text)
 
-# Footer (Tanpa garis pemisah dan jarak dirapatkan via CSS)
+# Footer
 st.caption("Sivita - Sistem Informasi Virtual Asisten Poltesa @2025")
