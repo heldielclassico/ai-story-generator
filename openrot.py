@@ -14,7 +14,7 @@ load_dotenv()
 st.set_page_config(page_title="Asisten POLTESA", page_icon="🎓")
 
 # --- INISIALISASI SESSION STATE ---
-# Ini penting agar jawaban tidak hilang saat halaman refresh/rerun
+# Menyimpan data agar tetap muncul meskipun form di-reset/rerun
 if "last_answer" not in st.session_state:
     st.session_state["last_answer"] = ""
 if "last_duration" not in st.session_state:
@@ -22,7 +22,6 @@ if "last_duration" not in st.session_state:
 
 # --- FUNGSI VALIDASI EMAIL ---
 def is_valid_email(email):
-    # Regex untuk memastikan format nama@gmail.com
     pattern = r'^[a-zA-Z0-9._%+-]+@gmail\.com$'
     return re.match(pattern, email) is not None
 
@@ -32,17 +31,11 @@ st.markdown("""
     .stTextArea textarea { border-radius: 10px; }
     .stTextInput input { border-radius: 10px; }
     .stButton button { border-radius: 20px; }
-    
-    /* Menghilangkan margin bawah form agar caption bisa lebih dekat */
     .stForm { margin-bottom: 0px !important; }
-    
-    /* Mengatur jarak caption agar mepet dengan tombol */
     .stCaption {
         margin-top: -15px !important;
         padding-top: 0px !important;
     }
-
-    /* Gaya untuk informasi durasi di bawah hasil */
     .duration-info {
         font-size: 0.75rem;
         color: #9ea4a9;
@@ -56,13 +49,14 @@ st.markdown("""
 st.title("🎓 Asisten Virtual Poltesa (Sivita)")
 
 # --- FUNGSI: SIMPAN LOG KE GOOGLE SHEETS ---
-def save_to_log(email, question, answer=""):
+def save_to_log(email, question, answer="", duration=0):
     try:
         log_url = st.secrets["LOG_URL"]
         payload = {
             "email": email,
             "question": question,
-            "answer": answer
+            "answer": answer,
+            "duration": f"{duration} detik" # Menambahkan durasi ke payload
         }
         requests.post(log_url, json=payload, timeout=5)
     except Exception as e:
@@ -88,14 +82,13 @@ def get_sheet_data():
     except:
         return ""
 
-# --- FUNGSI: HAPUS CHAT (Hanya Pertanyaan) ---
+# --- FUNGSI: HAPUS CHAT ---
 def clear_text():
+    # Menghapus input teks saja tanpa menghapus st.session_state["last_answer"]
     st.session_state["user_input"] = ""
-    # st.session_state["user_email"] = "" # Opsional: jika ingin email juga ikut terhapus
 
 # --- 4. Fungsi Generate Response ---
 def generate_response(user_email, user_input):
-    # Mulai hitung waktu pencarian
     start_time = time.time()
     
     try:
@@ -114,17 +107,16 @@ def generate_response(user_email, user_input):
         
         try:
             response = model.invoke(final_prompt)
-            
-            # Hitung durasi setelah response diterima
             end_time = time.time()
             duration = round(end_time - start_time, 2)
             
             if response and response.content:
-                # SIMPAN KE SESSION STATE agar tidak hilang saat rerun
+                # Simpan ke session state agar tidak hilang saat rerun
                 st.session_state["last_answer"] = response.content
                 st.session_state["last_duration"] = duration
                 
-                save_to_log(user_email, user_input, response.content)
+                # Simpan ke log termasuk durasi
+                save_to_log(user_email, user_input, response.content, duration)
             else:
                 st.warning("AI tidak dapat merumuskan jawaban.")
                 
@@ -157,7 +149,7 @@ with st.form("chat_form", clear_on_submit=False):
     with col1:
         submitted = st.form_submit_button("Kirim", use_container_width=True)
     with col2:
-        # Tombol ini memicu fungsi clear_text tapi tetap dalam siklus rerun Streamlit
+        # Tombol ini memicu fungsi clear_text yang mengosongkan text_area
         st.form_submit_button("Hapus Chat", on_click=clear_text, use_container_width=True)
     
     if submitted:
@@ -171,9 +163,8 @@ with st.form("chat_form", clear_on_submit=False):
             with st.spinner("Mencari data resmi..."):
                 generate_response(user_email, user_text)
 
-# --- BAGIAN MENAMPILKAN HASIL (DI LUAR FORM) ---
-# Bagian ini akan selalu dieksekusi setiap kali halaman rerun, 
-# sehingga jawaban terakhir akan tetap muncul meskipun input teks sudah dihapus.
+# --- BAGIAN HASIL (DI LUAR FORM) ---
+# Menampilkan jawaban terakhir jika ada di memori session_state
 if st.session_state["last_answer"]:
     st.chat_message("assistant").markdown(st.session_state["last_answer"])
     st.markdown(f'<p class="duration-info">⏱️ Pencarian selesai dalam {st.session_state["last_duration"]} detik</p>', unsafe_allow_html=True)
