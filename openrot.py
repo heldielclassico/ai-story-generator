@@ -3,6 +3,7 @@ import os
 import pandas as pd
 import requests
 import re  # Library untuk validasi format email
+import time # Library untuk menghitung durasi (detik)
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 
@@ -14,7 +15,6 @@ st.set_page_config(page_title="Asisten POLTESA", page_icon="🎓")
 
 # --- FUNGSI VALIDASI EMAIL ---
 def is_valid_email(email):
-    # Regex untuk memastikan format nama@gmail.com
     pattern = r'^[a-zA-Z0-9._%+-]+@gmail\.com$'
     return re.match(pattern, email) is not None
 
@@ -25,13 +25,20 @@ st.markdown("""
     .stTextInput input { border-radius: 10px; }
     .stButton button { border-radius: 20px; }
     
-    /* Menghilangkan margin bawah form agar caption bisa lebih dekat */
     .stForm { margin-bottom: 0px !important; }
     
-    /* Mengatur jarak caption agar mepet dengan tombol */
     .stCaption {
         margin-top: -15px !important;
         padding-top: 0px !important;
+    }
+
+    /* Style untuk info durasi pencarian */
+    .speed-info {
+        font-size: 0.8rem;
+        color: #2e7d32; /* Warna hijau gelap */
+        margin-top: -10px;
+        margin-bottom: 15px;
+        font-style: italic;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -71,19 +78,22 @@ def get_sheet_data():
     except:
         return ""
 
-# --- FUNGSI: HAPUS CHAT (Hanya Pertanyaan) ---
+# --- FUNGSI: HAPUS CHAT ---
 def clear_text():
     st.session_state["user_input"] = ""
 
 # --- 4. Fungsi Generate Response ---
 def generate_response(user_email, user_input):
     try:
+        # MULAI HITUNG WAKTU
+        start_time = time.time() 
+        
         api_key_secret = st.secrets["OPENROUTER_API_KEY"]
         instruction = st.secrets["SYSTEM_PROMPT"]
         additional_data = get_sheet_data()
         
         model = ChatOpenAI(
-            model="google/gemini-2.0-flash-lite-001",
+            model="google/gemini-2.5-flash-lite-001",
             openai_api_key=api_key_secret,
             openai_api_base="https://openrouter.ai/api/v1",
             temperature=0.0
@@ -92,8 +102,16 @@ def generate_response(user_email, user_input):
         final_prompt = f"{instruction}\n\nDATA: {additional_data}\n\nPERTANYAAN: {user_input}\n\nJAWABAN:"
         response = model.invoke(final_prompt)
         
+        # HITUNG SELESAI WAKTU
+        end_time = time.time()
+        duration = round(end_time - start_time, 2) # Dibulatkan 2 angka di belakang koma
+        
         if response and response.content:
             st.chat_message("assistant").markdown(response.content)
+            
+            # Tampilkan informasi kecepatan pencarian
+            st.markdown(f'<p class="speed-info">Pencarian selesai dalam {duration} detik</p>', unsafe_allow_html=True)
+            
             save_to_log(user_email, user_input, response.content)
     except Exception as e:
         st.error(f"Terjadi kesalahan teknis: {e}")
@@ -130,7 +148,5 @@ with st.form("chat_form", clear_on_submit=False):
             with st.spinner("Mencari data resmi..."):
                 generate_response(user_email, user_text)
 
-# Footer (Tanpa garis pemisah dan jarak dirapatkan via CSS)
+# Footer
 st.caption("Sivita - Sistem Informasi Virtual Asisten Poltesa @2025")
-
-
