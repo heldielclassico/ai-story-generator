@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 
 # Link raw dari GitHub
-url = "URL_RAW_GITHUB_OPENROT_PY_KAMU"
+url = "https://raw.githubusercontent.com/heldielclassico/ai-story-generator/refs/heads/main/openrot.py"
 
 response = requests.get(url)
 if response.status_code == 200:
