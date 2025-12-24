@@ -1,13 +1,17 @@
 import streamlit as st
 import requests
 
-# Link raw dari GitHub
-url = "https://raw.githubusercontent.com/heldielclassico/ai-story-generator/refs/heads/main/openrot.py"
-
-response = requests.get(url)
-if response.status_code == 200:
-    kode_sumber = response.text
-    # Jalankan kodenya
-    exec(kode_sumber)
-else:
-    st.error("Gagal mengambil file dari GitHub")
+# Mengambil URL dari Streamlit Secrets
+try:
+    url = st.secrets["URL"]
+    
+    response = requests.get(url)
+    if response.status_code == 200:
+        kode_sumber = response.text
+        # Menjalankan kode dari openrot.py
+        exec(kode_sumber)
+    else:
+        st.error(f"Gagal mengambil file. Status code: {response.status_code}")
+        
+except Exception as e:
+    st.error(f"Terjadi kesalahan: {e}")
