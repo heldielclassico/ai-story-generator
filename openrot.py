@@ -160,7 +160,7 @@ def generate_response(user_email, user_input):
 # --- 5. UI FORM ---
 with st.form("chat_form", clear_on_submit=False):
     user_email = st.text_input(
-        "Email Gmail Wajib (Format: nama@gmail.com):", 
+        "Masukan GMail Wajib (Format: nama@gmail.com):", 
         placeholder="contoh@gmail.com",
         key="user_email"
     )
@@ -196,4 +196,5 @@ if st.session_state["last_answer"]:
 
 # Footer
 st.caption("Sivita - Sistem Informasi Virtual Asisten Poltesa @2025")
+
 
