@@ -28,8 +28,8 @@ if "loaded" not in st.session_state:
                     border: 4px solid #f3f3f3;
                     border-top: 4px solid #3498db;
                     border-radius: 50%;
-                    width: 40px;
-                    height: 40px;
+                    width: 80px;
+                    height: 80px;
                     animation: spin 1s linear infinite;
                     margin-top: 20px;
                 }
@@ -39,7 +39,7 @@ if "loaded" not in st.session_state:
                 }
             </style>
         """, unsafe_allow_html=True)
-        time.sleep(5)  # Durasi loader 5 detik
+        time.sleep(10)  # Durasi loader 5 detik
     placeholder.empty()
     st.session_state["loaded"] = True
 
@@ -196,3 +196,4 @@ if st.session_state["last_answer"]:
 
 # Footer
 st.caption("Sivita - Sistem Informasi Virtual Asisten Poltesa @2025")
+
