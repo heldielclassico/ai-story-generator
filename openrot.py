@@ -173,6 +173,7 @@ if st.session_state["last_answer"]:
     st.markdown(f'<p class="duration-info">⏱️ Pencarian selesai dalam {st.session_state["last_duration"]} detik</p>', unsafe_allow_html=True)
 
 # Footer
-st.caption("Sivita - Sistem Informasi Virtual Asisten Poltesa @2025")
+st.caption("Sivita - Sistem Informasi Virtual Asisten Poltesa @2025 Beta Version V1.0")
+
 
 
