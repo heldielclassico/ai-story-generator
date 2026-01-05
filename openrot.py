@@ -49,7 +49,7 @@ st.markdown("""
 st.title("🎓 Asisten Virtual Poltesa (Sivita)")
 # Tambahkan baris ini di bawah st.title
 st.markdown("<p style='margin-top: -20px; font-size: 0.8em; color: gray;'>Versi Beta V1.0</p>", unsafe_allow_html=True)
-st.caption("Versi Beta V1.0")
+
 
 # --- FUNGSI: SIMPAN LOG KE GOOGLE SHEETS ---
 def save_to_log(email, question, answer="", duration=0):
@@ -173,7 +173,8 @@ if st.session_state["last_answer"]:
     st.markdown(f'<p class="duration-info">⏱️ Pencarian selesai dalam {st.session_state["last_duration"]} detik</p>', unsafe_allow_html=True)
 
 # Footer
-st.caption("Sivita - Sistem Informasi Virtual Asisten Poltesa @2025 Beta Version V1.0")
+st.caption("Sivita - Sistem Informasi Virtual Asisten Poltesa @2025")
+
 
 
 
