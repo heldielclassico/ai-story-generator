@@ -3,7 +3,7 @@ import os
 import pandas as pd
 import requests
 import re
-import time  # Library untuk menghitung durasi
+import time
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 
@@ -13,8 +13,37 @@ load_dotenv()
 # 2. Konfigurasi Halaman
 st.set_page_config(page_title="Asisten POLTESA", page_icon="🎓")
 
-# --- INISIALISASI SESSION STATE ---
-# Menyimpan data agar tetap muncul meskipun form di-reset/rerun
+# --- 3. SCREEN LOADER (Muncul 5 detik saat pertama kali buka) ---
+if "loaded" not in st.session_state:
+    placeholder = st.empty()
+    with placeholder.container():
+        st.markdown("""
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 70vh;">
+                <h1 style="color: #0e1117; font-family: sans-serif;">🎓 Sivita</h1>
+                <p style="color: #555;">Menyiapkan Asisten Virtual Poltesa...</p>
+                <div class="loader"></div>
+            </div>
+            <style>
+                .loader {
+                    border: 4px solid #f3f3f3;
+                    border-top: 4px solid #3498db;
+                    border-radius: 50%;
+                    width: 40px;
+                    height: 40px;
+                    animation: spin 1s linear infinite;
+                    margin-top: 20px;
+                }
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+            </style>
+        """, unsafe_allow_html=True)
+        time.sleep(5)  # Durasi loader 5 detik
+    placeholder.empty()
+    st.session_state["loaded"] = True
+
+# --- 4. INISIALISASI SESSION STATE ---
 if "last_answer" not in st.session_state:
     st.session_state["last_answer"] = ""
 if "last_duration" not in st.session_state:
@@ -46,12 +75,11 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
+# --- HEADER ---
 st.title("🎓 Asisten Virtual Poltesa (Sivita)")
-# Tambahkan baris ini di bawah st.title
 st.markdown("<p style='margin-top: -20px; font-size: 0.8em; color: gray;'>Versi Beta V1.0</p>", unsafe_allow_html=True)
 
-
-# --- FUNGSI: SIMPAN LOG  ---
+# --- FUNGSI: SIMPAN LOG ---
 def save_to_log(email, question, answer="", duration=0):
     try:
         log_url = st.secrets["LOG_URL"]
@@ -59,13 +87,13 @@ def save_to_log(email, question, answer="", duration=0):
             "email": email,
             "question": question,
             "answer": answer,
-            "duration": f"{duration} detik" # Menambahkan durasi ke payload
+            "duration": f"{duration} detik"
         }
         requests.post(log_url, json=payload, timeout=5)
     except Exception as e:
         print(f"Log Error: {e}")
 
-# --- FUNGSI: AMBIL DATA  ---
+# --- FUNGSI: AMBIL DATA ---
 def get_sheet_data():
     all_combined_data = ""
     try:     
@@ -87,10 +115,9 @@ def get_sheet_data():
 
 # --- FUNGSI: HAPUS CHAT ---
 def clear_text():
-    # Menghapus input teks saja tanpa menghapus st.session_state["last_answer"]
     st.session_state["user_input"] = ""
 
-# --- 4. Fungsi Generate Response ---
+# --- FUNGSI: GENERATE RESPONSE ---
 def generate_response(user_email, user_input):
     start_time = time.time()
     
@@ -114,11 +141,8 @@ def generate_response(user_email, user_input):
             duration = round(end_time - start_time, 2)
             
             if response and response.content:
-                # Simpan ke session state agar tidak hilang saat rerun
                 st.session_state["last_answer"] = response.content
                 st.session_state["last_duration"] = duration
-                
-                # Simpan ke log termasuk durasi
                 save_to_log(user_email, user_input, response.content, duration)
             else:
                 st.warning("AI tidak dapat merumuskan jawaban.")
@@ -133,7 +157,7 @@ def generate_response(user_email, user_input):
     except Exception as e:
         st.error(f"Gagal memuat konfigurasi: {e}")
 
-# 5. UI Form
+# --- 5. UI FORM ---
 with st.form("chat_form", clear_on_submit=False):
     user_email = st.text_input(
         "Email Gmail Wajib (Format: nama@gmail.com):", 
@@ -152,7 +176,6 @@ with st.form("chat_form", clear_on_submit=False):
     with col1:
         submitted = st.form_submit_button("Kirim", use_container_width=True)
     with col2:
-        # Tombol ini memicu fungsi clear_text yang mengosongkan text_area
         st.form_submit_button("Hapus Chat", on_click=clear_text, use_container_width=True)
     
     if submitted:
@@ -166,16 +189,10 @@ with st.form("chat_form", clear_on_submit=False):
             with st.spinner("Mencari data resmi..."):
                 generate_response(user_email, user_text)
 
-# --- BAGIAN HASIL (DI LUAR FORM) ---
-# Menampilkan jawaban terakhir jika ada di memori session_state
+# --- BAGIAN HASIL ---
 if st.session_state["last_answer"]:
     st.chat_message("assistant").markdown(st.session_state["last_answer"])
     st.markdown(f'<p class="duration-info">⏱️ Pencarian selesai dalam {st.session_state["last_duration"]} detik</p>', unsafe_allow_html=True)
 
 # Footer
 st.caption("Sivita - Sistem Informasi Virtual Asisten Poltesa @2025")
-
-
-
-
-
