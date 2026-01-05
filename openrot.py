@@ -51,7 +51,7 @@ st.title("🎓 Asisten Virtual Poltesa (Sivita)")
 st.markdown("<p style='margin-top: -20px; font-size: 0.8em; color: gray;'>Versi Beta V1.0</p>", unsafe_allow_html=True)
 
 
-# --- FUNGSI: SIMPAN LOG KE GOOGLE SHEETS ---
+# --- FUNGSI: SIMPAN LOG  ---
 def save_to_log(email, question, answer="", duration=0):
     try:
         log_url = st.secrets["LOG_URL"]
@@ -65,7 +65,7 @@ def save_to_log(email, question, answer="", duration=0):
     except Exception as e:
         print(f"Log Error: {e}")
 
-# --- FUNGSI: AMBIL DATA GOOGLE SHEETS ---
+# --- FUNGSI: AMBIL DATA  ---
 def get_sheet_data():
     all_combined_data = ""
     try:     
@@ -174,6 +174,7 @@ if st.session_state["last_answer"]:
 
 # Footer
 st.caption("Sivita - Sistem Informasi Virtual Asisten Poltesa @2025")
+
 
 
 
